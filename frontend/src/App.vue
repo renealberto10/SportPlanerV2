@@ -1,27 +1,46 @@
 <template>
-    <!-- Login page — no shell -->
+    <!-- Login / Landing — no shell -->
     <RouterView v-if="isLoginPage" />
 
     <!-- Main shell -->
     <div v-else class="flex h-screen overflow-hidden bg-slate-50">
 
-      <!-- ── Sidebar ──────────────────────────────────────── -->
-      <aside id="sidebar" class="sidebar w-64 flex-shrink-0 flex flex-col">
+      <!-- ── Mobile overlay ─────────────────────────────────── -->
+      <Transition name="overlay">
+        <div v-if="sidebarOpen"
+             class="fixed inset-0 z-30 bg-black/50 md:hidden"
+             @click="sidebarOpen = false" />
+      </Transition>
 
-        <!-- Logo mark -->
-        <div class="flex items-center gap-3 px-5 py-5" style="border-bottom:1px solid rgba(255,255,255,0.07)">
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-white text-sm"
-               style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 4px 14px rgba(59,130,246,0.45)">
-            SP
+      <!-- ── Sidebar ──────────────────────────────────────────── -->
+      <aside id="sidebar"
+             :class="['sidebar w-64 flex-shrink-0 flex flex-col',
+                      'fixed inset-y-0 left-0 z-40 md:relative md:z-auto',
+                      'transition-transform duration-300 ease-in-out',
+                      sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+
+        <!-- Logo mark + close btn -->
+        <div class="flex items-center justify-between px-4 py-5 md:px-5"
+             style="border-bottom:1px solid rgba(255,255,255,0.07)">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-white text-sm"
+                 style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 4px 14px rgba(59,130,246,0.45)">
+              SP
+            </div>
+            <div>
+              <div class="text-sm font-bold text-white tracking-wide leading-tight">SportPlanner</div>
+              <div class="text-xs leading-tight" style="color:rgba(148,163,184,0.6)">Gestión Deportiva</div>
+            </div>
           </div>
-          <div>
-            <div class="text-sm font-bold text-white tracking-wide leading-tight">SportPlanner</div>
-            <div class="text-xs leading-tight" style="color:rgba(148,163,184,0.6)">Gestión Deportiva</div>
-          </div>
+          <!-- Close button (mobile only) -->
+          <button @click="sidebarOpen = false"
+                  class="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
+            <XMarkIcon class="w-5 h-5" />
+          </button>
         </div>
 
         <!-- Nav -->
-        <nav class="flex-1 px-3 py-2 overflow-y-auto space-y-px">
+        <nav class="flex-1 px-3 py-2 overflow-y-auto space-y-px" @click="sidebarOpen = false">
 
           <div class="nav-section">Principal</div>
           <RouterLink to="/dashboard" class="nav-link" activeClass="active">
@@ -104,8 +123,13 @@
 
         <!-- Header -->
         <header class="app-header">
-          <div class="flex items-center gap-3">
-            <span class="w-[3px] h-5 rounded-full bg-blue-500 flex-shrink-0"></span>
+          <div class="flex items-center gap-2.5">
+            <!-- Hamburger (mobile only) -->
+            <button @click="sidebarOpen = true"
+                    class="md:hidden p-2 -ml-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors">
+              <Bars3Icon class="w-5 h-5" />
+            </button>
+            <span class="hidden md:block w-[3px] h-5 rounded-full bg-blue-500 flex-shrink-0"></span>
             <h1 class="text-sm font-semibold text-slate-900 truncate">{{ pageTitle }}</h1>
           </div>
           <div class="flex items-center gap-3">
@@ -127,7 +151,7 @@
         </header>
 
         <!-- Content -->
-        <main class="flex-1 overflow-y-auto p-6">
+        <main class="flex-1 overflow-y-auto p-4 md:p-6">
           <RouterView />
         </main>
       </div>
@@ -137,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Squares2X2Icon,
@@ -153,6 +177,8 @@ import {
   DevicePhoneMobileIcon,
   ArchiveBoxIcon,
   UserGroupIcon,
+  Bars3Icon,
+  XMarkIcon,
 } from '@heroicons/vue/24/outline'
 import ToastContainer from '@/components/ToastContainer.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -161,9 +187,14 @@ const auth   = useAuthStore()
 const route  = useRoute()
 const router = useRouter()
 
+const sidebarOpen = ref(false)
+
 const isLoginPage = computed(() => route.meta?.public === true)
-const pageTitle   = computed(() => (route.meta?.title as string) || 'SportPlaner')
+const pageTitle   = computed(() => (route.meta?.title as string) || 'SportPlanner')
 const currentDate = new Intl.DateTimeFormat('es-SV', { dateStyle: 'full' }).format(new Date())
+
+// Close sidebar on route change (mobile)
+watch(() => route.path, () => { sidebarOpen.value = false })
 
 const icons = {
   dashboard:    Squares2X2Icon,
@@ -186,6 +217,10 @@ async function logout() {
   router.push('/login')
 }
 
-// Restore session on refresh
 onMounted(() => auth.fetchMe())
 </script>
+
+<style scoped>
+.overlay-enter-active, .overlay-leave-active { transition: opacity 0.25s ease; }
+.overlay-enter-from, .overlay-leave-to { opacity: 0; }
+</style>

@@ -1,57 +1,39 @@
-# ── SportPlaner — Production ──────────────────────────────
-# Requisitos previos:
-#   1. docker network create traefik-public
+# ── SportPlanner — Production ──────────────────────────────
+# Usa el Traefik existente en el servidor (red: web, certresolver: letsencrypt)
+#
+# Requisitos previos en el servidor:
+#   1. Red "web" ya existe (creada por traefik-portainer)
 #   2. Copiar .env.prod.example → .env.prod y completar APP_KEY
-#   3. Apuntar sportplanner.app → IP del servidor
+#   3. DNS: sportplanner.app y www.sportplanner.app → IP del servidor
 #
 # Uso:
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 # ──────────────────────────────────────────────────────────
 
-name: sportplaner-prod
+name: sportplanner-prod
 
 networks:
-  traefik-public:
-    external: true      # creada manualmente: docker network create traefik-public
+  web:
+    external: true          # Red del Traefik del servidor
   internal:
-    driver: bridge      # red privada frontend ↔ api
+    driver: bridge          # Red privada frontend ↔ api
 
 volumes:
-  letsencrypt:          # certificados Let's Encrypt (persistentes)
-  sqlite-data:          # base de datos SQLite
-  api-storage:          # logs, cache, sesiones de Laravel
+  sqlite-data:              # Base de datos SQLite (persistente)
+  api-storage:              # Storage de Laravel (persistente)
 
 services:
-
-  # ── Traefik (reverse proxy + SSL) ──────────────────────
-  traefik:
-    image: traefik:v3.1
-    container_name: sp-traefik
-    restart: unless-stopped
-    command:
-      - "--configFile=/traefik.yml"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/traefik.yml:/traefik.yml:ro
-      - letsencrypt:/letsencrypt
-    networks:
-      - traefik-public
-    labels:
-      - "traefik.enable=false"    # El propio Traefik no se auto-expone
 
   # ── Laravel API ────────────────────────────────────────
   api:
     build:
       context: .
       dockerfile: docker/api/Dockerfile
-    image: sportplaner/api:latest
+    image: sportplanner/api:latest
     container_name: sp-api
     restart: unless-stopped
     environment:
-      APP_NAME: SportPlaner
+      APP_NAME: SportPlanner
       APP_ENV: production
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY}
@@ -60,13 +42,12 @@ services:
       DB_DATABASE: /var/www/html/database/database.sqlite
       LOG_CHANNEL: stderr
       LOG_LEVEL: error
-      # Trusted proxies (Traefik → Nginx → PHP-FPM)
       TRUSTED_PROXIES: "*"
     volumes:
       - sqlite-data:/var/www/html/database
       - api-storage:/var/www/html/storage
     networks:
-      - internal              # solo accesible desde frontend, no desde internet
+      - internal
     labels:
       - "traefik.enable=false"
 
@@ -75,31 +56,48 @@ services:
     build:
       context: .
       dockerfile: docker/frontend/Dockerfile
-    image: sportplaner/frontend:latest
+    image: sportplanner/frontend:latest
     container_name: sp-frontend
     restart: unless-stopped
     depends_on:
       - api
     networks:
-      - traefik-public
+      - web
       - internal
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=web"
 
-      # ── Router principal: HTTPS ──────────────────────
-      - "traefik.http.routers.sportplaner.rule=Host(`sportplanner.app`) || Host(`www.sportplanner.app`)"
+      # ── HTTPS: sportplanner.app ────────────────────────
+      - "traefik.http.routers.sportplaner.rule=Host(`sportplanner.app`)"
       - "traefik.http.routers.sportplaner.entrypoints=websecure"
       - "traefik.http.routers.sportplaner.tls=true"
       - "traefik.http.routers.sportplaner.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.sportplaner.middlewares=sp-security"
       - "traefik.http.services.sportplaner.loadbalancer.server.port=80"
 
-      # ── Redirect www → non-www ────────────────────────
-      - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https://www\\.sportplanner\\.app(.*)"
-      - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://sportplanner.app$${1}"
-      - "traefik.http.middlewares.www-redirect.redirectregex.permanent=true"
-      - "traefik.http.routers.sportplaner.middlewares=www-redirect"
+      # ── HTTPS: www.sportplanner.app → redirect apex ───
+      - "traefik.http.routers.sportplaner-www.rule=Host(`www.sportplanner.app`)"
+      - "traefik.http.routers.sportplaner-www.entrypoints=websecure"
+      - "traefik.http.routers.sportplaner-www.tls=true"
+      - "traefik.http.routers.sportplaner-www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.sportplaner-www.middlewares=sp-www-redirect"
 
-      # ── Security headers middleware ───────────────────
-      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
-      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
-      - "traefik.http.middlewares.security-headers.headers.forceSTSHeader=true"
+      # ── HTTP → HTTPS redirect ─────────────────────────
+      - "traefik.http.routers.sportplaner-http.rule=Host(`sportplanner.app`) || Host(`www.sportplanner.app`)"
+      - "traefik.http.routers.sportplaner-http.entrypoints=web"
+      - "traefik.http.routers.sportplaner-http.middlewares=sp-https-redirect"
+
+      # ── Middlewares ───────────────────────────────────
+      - "traefik.http.middlewares.sp-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.sp-https-redirect.redirectscheme.permanent=true"
+
+      - "traefik.http.middlewares.sp-www-redirect.redirectregex.regex=^https://www\\.sportplanner\\.app/(.*)"
+      - "traefik.http.middlewares.sp-www-redirect.redirectregex.replacement=https://sportplanner.app/$${1}"
+      - "traefik.http.middlewares.sp-www-redirect.redirectregex.permanent=true"
+
+      - "traefik.http.middlewares.sp-security.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.sp-security.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.sp-security.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.sp-security.headers.frameDeny=true"
+      - "traefik.http.middlewares.sp-security.headers.contentTypeNosniff=true"

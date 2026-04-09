@@ -135,45 +135,88 @@ aside ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radi
 /* ─── Mobile forms ──────────────────────────────────── */
 .form-mobile {
   font-size: 16px; /* prevent iOS auto-zoom */
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
 }
-.form-mobile .input, .form-mobile select, .form-mobile textarea {
-  font-size: 16px !important;
-  min-height: 48px;
+.form-mobile .input,
+.form-mobile select,
+.form-mobile textarea {
+  font-size: 16px !important; /* prevent iOS zoom on focus */
+  min-height: 52px;           /* comfortable tap target */
+  border-radius: 0.875rem;
 }
-.form-mobile textarea { min-height: 96px; }
+.form-mobile textarea { min-height: 108px; }
+
+/* Larger labels on mobile */
+.form-mobile .label { font-size: 0.75rem; margin-bottom: 0.5rem; }
+
 .form-section {
-  @apply bg-white rounded-2xl p-5 mb-4 border border-slate-200/80 shadow-sm;
+  @apply bg-white rounded-2xl p-4 mb-4 border border-slate-200/80 shadow-sm;
+}
+@media (min-width: 640px) {
+  .form-section { @apply p-5; }
 }
 .form-section-title {
-  @apply text-xs font-bold uppercase tracking-widest text-slate-400 mb-3;
+  @apply text-xs font-bold uppercase tracking-widest text-slate-400 mb-4;
 }
+
+/* Tipo buttons — bigger tap area on mobile */
 .tipo-btn {
-  @apply flex-1 flex flex-col items-center justify-center gap-1.5 py-3 px-2
+  @apply flex-1 flex flex-col items-center justify-center gap-1.5
          rounded-xl border-2 text-sm font-semibold transition-all duration-150 cursor-pointer;
+  padding: 0.875rem 0.5rem;
+  min-height: 72px;
 }
 .tipo-btn.active  { @apply border-blue-500 bg-blue-50 text-blue-700; }
-.tipo-btn.inactive{ @apply border-slate-200 bg-white text-slate-500; }
+.tipo-btn.inactive{ @apply border-slate-200 bg-white text-slate-500 active:bg-slate-50; }
+
+/* Photo buttons */
 .foto-add-btn {
   @apply flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed
          border-slate-200 text-slate-400 cursor-pointer transition-all duration-150
-         hover:border-blue-400 hover:bg-blue-50/40 hover:text-blue-500;
-  min-height: 96px;
+         active:bg-blue-50/60 active:border-blue-400 active:text-blue-500;
+  min-height: 88px;
 }
+@media (hover: hover) {
+  .foto-add-btn:hover { @apply border-blue-400 bg-blue-50/40 text-blue-500; }
+}
+
 .foto-thumb {
   @apply relative rounded-xl overflow-hidden bg-slate-100;
   aspect-ratio: 4/3;
 }
 .foto-thumb img { @apply w-full h-full object-cover; }
+
+/* Delete button: always visible on touch, hover-only on desktop */
 .foto-del {
-  @apply absolute top-1.5 right-1.5 w-7 h-7 bg-red-500 text-white rounded-full
-         text-sm font-bold flex items-center justify-center opacity-0 transition-all;
+  @apply absolute top-1.5 right-1.5 w-8 h-8 bg-red-500 text-white rounded-full
+         text-sm font-bold flex items-center justify-center transition-all shadow-md;
 }
-.foto-thumb:hover .foto-del { @apply opacity-100; }
+@media (hover: hover) {
+  /* Desktop: show only on hover */
+  .foto-del { opacity: 0; }
+  .foto-thumb:hover .foto-del { opacity: 1; }
+}
+@media (hover: none) {
+  /* Touch device: always visible */
+  .foto-del { opacity: 1; }
+}
+
+/* Save bar */
 .save-bar {
-  @apply sticky bottom-0 left-0 right-0 p-4 bg-white/95
-         border-t border-slate-200;
+  @apply sticky bottom-0 left-0 right-0 p-4 bg-white/95 border-t border-slate-200;
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+}
+.save-bar .btn {
+  min-height: 54px;
+  font-size: 1rem;
+  border-radius: 0.875rem;
+}
+
+/* ─── Responsive main content padding ───────────────── */
+@media (max-width: 767px) {
+  #main > main { padding: 1rem; }
 }
 
 /* ─── Print ─────────────────────────────────────────── */
