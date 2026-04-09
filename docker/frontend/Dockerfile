@@ -8,7 +8,7 @@ COPY frontend/package*.json ./
 RUN npm ci --prefer-offline
 
 COPY frontend/ .
-RUN npm run build
+RUN npm run build-only
 
 # Stage 2: Serve with Nginx
 FROM nginx:1.27-alpine AS runner
