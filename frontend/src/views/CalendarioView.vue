@@ -1,0 +1,212 @@
+<template>
+  <div>
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">Calendario</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Vista mensual de mantenimientos y eventos</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn btn-outline btn-sm" @click="prevMonth">← Anterior</button>
+        <span class="font-semibold text-slate-800 text-sm w-44 text-center">
+          {{ mesLabel }} {{ year }}
+        </span>
+        <button class="btn btn-outline btn-sm" @click="nextMonth">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="flex gap-5 mb-4 text-xs">
+      <span class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block"></span>
+        <span class="text-slate-500 font-medium">Mantenimiento</span>
+      </span>
+      <span class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span>
+        <span class="text-slate-500 font-medium">Evento</span>
+      </span>
+    </div>
+
+    <div class="card p-0 overflow-hidden">
+      <LoadingSpinner v-if="loading" />
+      <template v-else>
+        <!-- Day headers -->
+        <div class="grid grid-cols-7 border-b border-slate-100">
+          <div v-for="d in days" :key="d"
+               class="py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50/80">
+            {{ d }}
+          </div>
+        </div>
+
+        <!-- Calendar grid -->
+        <div class="grid grid-cols-7">
+          <div
+            v-for="(day, i) in calDays"
+            :key="i"
+            class="min-h-28 border-b border-r border-slate-100 p-2 transition-colors last:border-r-0"
+            :class="[
+              day.current
+                ? day.isToday
+                  ? 'bg-blue-50/60 cursor-pointer hover:bg-blue-50'
+                  : 'bg-white cursor-pointer hover:bg-slate-50/60'
+                : 'bg-slate-50/40',
+            ]"
+            @click="dayClick(day)"
+          >
+            <!-- Day number -->
+            <div class="mb-1.5">
+              <span
+                class="inline-flex w-6 h-6 items-center justify-center rounded-full text-xs font-semibold"
+                :class="
+                  day.isToday
+                    ? 'bg-blue-600 text-white'
+                    : day.current
+                    ? 'text-slate-700'
+                    : 'text-slate-300'
+                "
+              >{{ day.n }}</span>
+            </div>
+
+            <!-- Chips -->
+            <div
+              v-for="m in day.mants"
+              :key="'m' + m.id"
+              class="text-xs bg-blue-100 text-blue-700 rounded px-1.5 py-0.5 mb-0.5 truncate leading-tight font-medium"
+              :title="m.escenario?.nombre"
+            >⚙ {{ m.escenario?.nombre?.substring(0, 16) || 'Mant.' }}</div>
+
+            <div
+              v-for="e in day.eventos"
+              :key="'e' + e.id"
+              class="text-xs bg-emerald-100 text-emerald-700 rounded px-1.5 py-0.5 mb-0.5 truncate leading-tight font-medium"
+              :title="e.nombre"
+            >◎ {{ e.nombre?.substring(0, 16) }}</div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Day Detail Modal -->
+    <AppModal v-model="showDayModal" :title="`${selectedDate}`" maxWidth="520px">
+      <div class="space-y-4">
+        <!-- Mantenimientos -->
+        <div v-if="selectedMants.length">
+          <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">⚙ Mantenimientos</h4>
+          <div v-for="m in selectedMants" :key="m.id" class="rounded-xl border border-blue-100 bg-blue-50/50 p-3.5 mb-2">
+            <div class="font-semibold text-slate-900 text-sm">{{ m.escenario?.nombre }}</div>
+            <div class="text-xs text-slate-500 mt-1">
+              <span class="font-medium">Técnico:</span> {{ m.tecnico || 'N/A' }} ·
+              <span class="font-medium">Tipo:</span> {{ m.tipo }} ·
+              <span :class="MANTENIMIENTO_ESTADO_BADGE[m.estado] || 'badge badge-gray'" class="ml-1">{{ m.estado }}</span>
+            </div>
+            <div v-if="m.actividades" class="text-xs text-slate-600 mt-2 leading-relaxed">{{ m.actividades }}</div>
+          </div>
+        </div>
+
+        <!-- Eventos -->
+        <div v-if="selectedEventos.length">
+          <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">◎ Eventos</h4>
+          <div v-for="e in selectedEventos" :key="e.id" class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3.5 mb-2">
+            <div class="font-semibold text-slate-900 text-sm">{{ e.nombre }}</div>
+            <div class="text-xs text-slate-500 mt-1">
+              {{ e.escenario?.nombre }} · {{ e.hora || '' }} ·
+              <span :class="EVENTO_ESTADO_BADGE[e.estado] || 'badge badge-gray'" class="ml-1">{{ e.estado }}</span>
+            </div>
+            <div v-if="e.descripcion" class="text-xs text-slate-600 mt-2 leading-relaxed">{{ e.descripcion }}</div>
+          </div>
+        </div>
+
+        <div v-if="!selectedMants.length && !selectedEventos.length"
+             class="text-center py-10 text-slate-400 text-sm">
+          Sin actividades registradas para este día
+        </div>
+      </div>
+      <template #footer>
+        <button class="btn btn-outline btn-sm" @click="showDayModal = false">Cerrar</button>
+        <RouterLink to="/mantenimiento" class="btn btn-outline btn-sm" @click="showDayModal = false">+ Mantenimiento</RouterLink>
+        <RouterLink to="/eventos" class="btn btn-success btn-sm" @click="showDayModal = false">+ Evento</RouterLink>
+      </template>
+    </AppModal>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { mantenimientoApi, eventoApi } from '@/api'
+import { useApiError } from '@/composables/useApiError'
+import { MANTENIMIENTO_ESTADO_BADGE, EVENTO_ESTADO_BADGE, MESES } from '@/constants'
+import type { Mantenimiento, Evento } from '@/types'
+import AppModal from '@/components/AppModal.vue'
+import LoadingSpinner from '@/components/LoadingSpinner.vue'
+
+const { handleError } = useApiError()
+const loading      = ref(true)
+const allMants     = ref<Mantenimiento[]>([])
+const allEventos   = ref<Evento[]>([])
+const now          = new Date()
+const month        = ref(now.getMonth())
+const year         = ref(now.getFullYear())
+const showDayModal = ref(false)
+const selectedDate    = ref('')
+const selectedMants   = ref<Mantenimiento[]>([])
+const selectedEventos = ref<Evento[]>([])
+
+const days     = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+const mesLabel = computed(() => MESES[month.value])
+
+const calDays = computed(() => {
+  const first = new Date(year.value, month.value, 1)
+  const last  = new Date(year.value, month.value + 1, 0)
+  const today = new Date()
+  const cells: { n: number | string; current: boolean; isToday: boolean; dateStr: string; mants: Mantenimiento[]; eventos: Evento[] }[] = []
+
+  for (let i = 0; i < first.getDay(); i++) {
+    cells.push({ n: '', current: false, isToday: false, dateStr: '', mants: [], eventos: [] })
+  }
+  for (let d = 1; d <= last.getDate(); d++) {
+    const dateStr = `${year.value}-${String(month.value + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    cells.push({
+      n: d, current: true, dateStr,
+      isToday: today.getDate() === d && today.getMonth() === month.value && today.getFullYear() === year.value,
+      mants:   allMants.value.filter(m => m.fecha === dateStr),
+      eventos: allEventos.value.filter(e => e.fecha === dateStr),
+    })
+  }
+  return cells
+})
+
+function dayClick(day: typeof calDays.value[0]) {
+  if (!day.current) return
+  selectedDate.value    = day.dateStr
+  selectedMants.value   = day.mants
+  selectedEventos.value = day.eventos
+  showDayModal.value    = true
+}
+
+async function loadData() {
+  loading.value = true
+  try {
+    const [m, e] = await Promise.all([
+      mantenimientoApi.list({ mes: month.value + 1, anio: year.value }),
+      eventoApi.list({ mes: month.value + 1, anio: year.value }),
+    ])
+    allMants.value   = m.data.data
+    allEventos.value = e.data.data
+  } catch (e) {
+    handleError(e, 'Error al cargar el calendario')
+  } finally {
+    loading.value = false
+  }
+}
+
+function prevMonth() {
+  if (month.value === 0) { month.value = 11; year.value-- } else month.value--
+  loadData()
+}
+function nextMonth() {
+  if (month.value === 11) { month.value = 0; year.value++ } else month.value++
+  loadData()
+}
+
+onMounted(loadData)
+</script>

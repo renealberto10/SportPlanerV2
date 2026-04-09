@@ -1,0 +1,28 @@
+<?php
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class MantenimientoResource extends JsonResource {
+    public function toArray(Request $request): array {
+        return [
+            'id'           => $this->id,
+            'escenario_id' => $this->escenario_id,
+            'escenario'    => $this->whenLoaded('escenario', fn() => ['id' => $this->escenario->id, 'nombre' => $this->escenario->nombre]),
+            'tecnico_id'   => $this->tecnico_id,
+            'tecnico_obj'  => $this->whenLoaded('tecnicoRel', fn() => $this->tecnicoRel ? ['id' => $this->tecnicoRel->id, 'nombre_completo' => $this->tecnicoRel->nombre_completo] : null),
+            'fecha'        => $this->fecha,
+            'hora'         => $this->hora,
+            'tecnico'      => $this->tecnico,
+            'tipo'         => $this->tipo,
+            'actividades'  => $this->actividades,
+            'observaciones'=> $this->observaciones,
+            'estado'       => $this->estado,
+            'horas'        => $this->horas,
+            'personal'     => $this->personal,
+            'fotos'        => collect($this->fotos ?? [])->map(fn($p) => asset('storage/' . $p))->values(),
+            'created_at'   => $this->created_at,
+        ];
+    }
+}

@@ -1,0 +1,54 @@
+# ── Traefik v3 — Static Configuration ──────────────────
+# sportplanner.app
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# Logging
+log:
+  level: INFO
+  format: common
+
+accessLog: {}
+
+# Traefik dashboard (deshabilitado en prod — habilitarlo solo si es necesario
+# y asegurarlo con autenticación)
+api:
+  dashboard: false
+  insecure: false
+
+# ── Entrypoints ────────────────────────────────────────
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  websecure:
+    address: ":443"
+    http:
+      tls: {}
+
+# ── Let's Encrypt ──────────────────────────────────────
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      # ⚠️  Cambia este email antes de desplegar
+      email: admin@sportplanner.app
+      storage: /letsencrypt/acme.json
+      # HTTP challenge (el servidor debe ser accesible en el puerto 80)
+      httpChallenge:
+        entryPoint: web
+
+# ── Docker provider ────────────────────────────────────
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: traefik-public
+    watch: true

@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISATECH — Sistema de Gestión INDES</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --sidebar-w: 260px;
+    --blue: #1e3a5f;
+    --blue-light: #2563eb;
+    --accent: #10b981;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; display: flex; height: 100vh; overflow: hidden; }
+  #sidebar {
+    width: var(--sidebar-w); background: var(--blue); color: white;
+    display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto;
+  }
+  #sidebar .brand { padding: 20px 16px 12px; border-bottom: 1px solid rgba(255,255,255,.12); }
+  #sidebar .brand h1 { font-size: 1.2rem; font-weight: 700; color: #60a5fa; }
+  #sidebar .brand p { font-size: .72rem; color: #94a3b8; margin-top: 2px; }
+  #sidebar nav { flex: 1; padding: 10px 0; }
+  #sidebar nav a {
+    display: flex; align-items: center; gap: 10px; padding: 10px 18px;
+    color: #cbd5e1; text-decoration: none; font-size: .88rem; cursor: pointer;
+    transition: background .15s;
+  }
+  #sidebar nav a:hover, #sidebar nav a.active {
+    background: rgba(255,255,255,.1); color: white;
+  }
+  #sidebar nav a.active { border-left: 3px solid #60a5fa; }
+  #sidebar .oc-box { margin: 10px 12px 16px; background: rgba(255,255,255,.08); border-radius: 8px; padding: 12px; font-size: .75rem; color: #94a3b8; }
+  #sidebar .oc-box strong { color: #e2e8f0; display: block; margin-bottom: 4px; }
+  #main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+  #topbar { background: white; border-bottom: 1px solid #e2e8f0; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  #topbar h2 { font-size: 1.1rem; font-weight: 600; color: #1e293b; }
+  #content { flex: 1; padding: 24px; }
+
+  /* Cards */
+  .card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 20px; }
+  .stat-card { background: white; border-radius: 10px; padding: 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .stat-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
+  .stat-val { font-size: 1.6rem; font-weight: 700; color: #1e293b; }
+  .stat-lbl { font-size: .78rem; color: #64748b; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8fafc; font-size: .75rem; font-weight: 600; color: #64748b; text-transform: uppercase; padding: 10px 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+  td { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; font-size: .87rem; color: #374151; }
+  tr:hover td { background: #f8fafc; }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .72rem; font-weight: 600; }
+  .badge-green { background: #d1fae5; color: #065f46; }
+  .badge-yellow { background: #fef3c7; color: #92400e; }
+  .badge-red { background: #fee2e2; color: #991b1b; }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-gray { background: #f1f5f9; color: #475569; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 7px; font-size: .85rem; font-weight: 500; cursor: pointer; border: none; transition: opacity .15s; }
+  .btn:hover { opacity: .88; }
+  .btn-primary { background: #2563eb; color: white; }
+  .btn-success { background: #10b981; color: white; }
+  .btn-danger { background: #ef4444; color: white; }
+  .btn-outline { background: white; border: 1px solid #d1d5db; color: #374151; }
+  .btn-sm { padding: 5px 10px; font-size: .78rem; }
+
+  /* Modal */
+  #modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: center; justify-content: center; }
+  #modal-backdrop.open { display: flex; }
+  .modal { background: white; border-radius: 12px; width: 90%; max-width: 580px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+  .modal-header { padding: 18px 22px 14px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h3 { font-size: 1rem; font-weight: 600; }
+  .modal-body { padding: 20px 22px; }
+  .modal-footer { padding: 14px 22px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* Forms */
+  .form-group { margin-bottom: 14px; }
+  label { display: block; font-size: .82rem; font-weight: 500; color: #374151; margin-bottom: 5px; }
+  input, select, textarea { width: 100%; padding: 8px 11px; border: 1px solid #d1d5db; border-radius: 7px; font-size: .88rem; outline: none; transition: border-color .15s; }
+  input:focus, select:focus, textarea:focus { border-color: #2563eb; }
+  textarea { resize: vertical; min-height: 70px; }
+
+  /* Calendar */
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-day-hdr { text-align: center; font-size: .72rem; font-weight: 600; color: #64748b; padding: 6px; }
+  .cal-day {
+    min-height: 82px; background: white; border: 1px solid #e2e8f0; border-radius: 6px;
+    padding: 5px; cursor: pointer; transition: border-color .15s;
+  }
+  .cal-day:hover { border-color: #2563eb; }
+  .cal-day.today { border-color: #2563eb; background: #eff6ff; }
+  .cal-day.other-month { background: #f8fafc; }
+  .cal-day .day-num { font-size: .78rem; font-weight: 600; color: #1e293b; margin-bottom: 3px; }
+  .cal-day.today .day-num { color: #2563eb; }
+  .cal-dot { height: 5px; width: 5px; border-radius: 50%; display: inline-block; margin: 1px; }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+  .toast-msg { background: #1e293b; color: white; padding: 12px 18px; border-radius: 8px; font-size: .85rem; box-shadow: 0 4px 12px rgba(0,0,0,.2); animation: slideIn .2s ease; }
+  .toast-msg.success { background: #065f46; }
+  .toast-msg.error { background: #991b1b; }
+  @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* Report print */
+  @media print {
+    #sidebar, #topbar, .no-print { display: none !important; }
+    #main { overflow: visible; }
+    #content { padding: 0; }
+    body { background: white; }
+    .print-section { page-break-after: always; }
+  }
+
+  .section-title { font-size: 1rem; font-weight: 600; color: #1e293b; margin-bottom: 14px; }
+  .empty-state { text-align: center; padding: 48px 20px; color: #94a3b8; }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .grid-4, .grid-3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+
+  .tab-bar { display: flex; gap: 4px; border-bottom: 2px solid #e2e8f0; margin-bottom: 18px; }
+  .tab { padding: 8px 16px; font-size: .85rem; cursor: pointer; color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+  .tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+
+  .search-bar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
+  .search-bar input { max-width: 280px; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="brand">
+    <h1>⚡ ISATECH</h1>
+    <p>Gestión INDES • OC 115/2026</p>
+  </div>
+  <nav id="nav">
+    <a onclick="navigate('dashboard')" data-page="dashboard" class="active">📊 Dashboard</a>
+    <a onclick="navigate('escenarios')" data-page="escenarios">🏟️ Escenarios</a>
+    <a onclick="navigate('equipos')" data-page="equipos">🖥️ Equipos</a>
+    <a onclick="navigate('calendario')" data-page="calendario">📅 Calendario</a>
+    <a onclick="navigate('mantenimiento')" data-page="mantenimiento">🔧 Mantenimiento</a>
+    <a onclick="navigate('eventos')" data-page="eventos">🎉 Eventos</a>
+    <a onclick="navigate('reportes')" data-page="reportes">📄 Reportes</a>
+  </nav>
+  <div class="oc-box">
+    <strong>Orden de Compra 115/2026</strong>
+    Vigencia: Mar–Dic 2026<br>
+    Valor: $94,760.00<br>
+    Admin: L. Villeda Pacheco
+  </div>
+</div>
+
+<div id="main">
+  <div id="topbar">
+    <h2 id="page-title">Dashboard</h2>
+    <div id="topbar-actions"></div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<!-- Modal -->
+<div id="modal-backdrop">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title"></h3>
+      <button class="btn btn-outline btn-sm" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ==================== DATA LAYER ====================
+const ESCENARIOS_DEFAULT = [
+  { id: 1, nombre: "Estadio Nacional Las Delicias", activo: true, descripcion: "Estadio principal de fútbol" },
+  { id: 2, nombre: "Gimnasio Nacional José Adolfo Pineda", activo: true, descripcion: "Gimnasio multideportivo" },
+  { id: 3, nombre: "Estadio Nacional Jorge 'El Mágico' González", activo: true, descripcion: "Estadio de fútbol" },
+  { id: 4, nombre: "Estadio de Sóftbol Pablo Arnoldo Guzmán", activo: true, descripcion: "Estadio de sóftbol" },
+  { id: 5, nombre: "Parque de Pelota Saturnino Bengoa", activo: true, descripcion: "Parque de béisbol/pelota" },
+  { id: 6, nombre: "Polideportivo de Ciudad Merliot", activo: true, descripcion: "Complejo polideportivo" },
+  { id: 7, nombre: "Polideportivo El Polvorín", activo: true, descripcion: "Complejo polideportivo" },
+  { id: 8, nombre: "Palacio de los Deportes Carlos 'El Famoso' Hernández", activo: true, descripcion: "Palacio de deportes" },
+  { id: 9, nombre: "Bodega de Repuestos — Villa Centroamericana", activo: true, descripcion: "Bodega de repuestos y almacén" }
+];
+
+const DB = {
+  load(key, def) { try { return JSON.parse(localStorage.getItem('isatech_'+key)) || def; } catch { return def; } },
+  save(key, val) { localStorage.setItem('isatech_'+key, JSON.stringify(val)); },
+  get escenarios() { return this.load('escenarios', ESCENARIOS_DEFAULT); },
+  set escenarios(v) { this.save('escenarios', v); },
+  get equipos() { return this.load('equipos', []); },
+  set equipos(v) { this.save('equipos', v); },
+  get mantenimientos() { return this.load('mantenimientos', []); },
+  set mantenimientos(v) { this.save('mantenimientos', v); },
+  get eventos() { return this.load('eventos', []); },
+  set eventos(v) { this.save('eventos', v); },
+  nextId(arr) { return arr.length ? Math.max(...arr.map(x=>x.id))+1 : 1; }
+};
+
+// ==================== ROUTER ====================
+let currentPage = 'dashboard';
+
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('#nav a').forEach(a => {
+    a.classList.toggle('active', a.dataset.page === page);
+  });
+  const titles = {
+    dashboard: 'Dashboard', escenarios: 'Escenarios Deportivos',
+    equipos: 'Inventario de Equipos', calendario: 'Calendario',
+    mantenimiento: 'Bitácora de Mantenimiento', eventos: 'Bitácora de Eventos',
+    reportes: 'Generador de Reportes'
+  };
+  document.getElementById('page-title').textContent = titles[page] || page;
+  document.getElementById('topbar-actions').innerHTML = '';
+  renderPage(page);
+}
+
+function renderPage(page) {
+  const c = document.getElementById('content');
+  switch(page) {
+    case 'dashboard': c.innerHTML = renderDashboard(); initCharts(); break;
+    case 'escenarios': c.innerHTML = renderEscenarios(); break;
+    case 'equipos': c.innerHTML = renderEquipos(); bindEquiposFilter(); break;
+    case 'calendario': c.innerHTML = renderCalendario(); break;
+    case 'mantenimiento': c.innerHTML = renderMantenimiento(); break;
+    case 'eventos': c.innerHTML = renderEventos(); break;
+    case 'reportes': c.innerHTML = renderReportes(); break;
+  }
+}
+
+// ==================== DASHBOARD ====================
+function renderDashboard() {
+  const mants = DB.mantenimientos;
+  const eventos = DB.eventos;
+  const equipos = DB.equipos;
+  const escenarios = DB.escenarios;
+  const now = new Date();
+  const mes = now.getMonth(); const anio = now.getFullYear();
+
+  const mMes = mants.filter(m => { const d = new Date(m.fecha); return d.getMonth()===mes && d.getFullYear()===anio; });
+  const eMes = eventos.filter(e => { const d = new Date(e.fecha); return d.getMonth()===mes && d.getFullYear()===anio; });
+  const activos = equipos.filter(e => e.estado==='operativo').length;
+  const proxMant = mants.filter(m => { const d = new Date(m.fecha); return d >= now; }).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha)).slice(0,5);
+  const proxEvt = eventos.filter(e => { const d = new Date(e.fecha); return d >= now; }).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha)).slice(0,5);
+
+  const escNombres = escenarios.map(e=>e.nombre.split(' ').slice(0,2).join(' '));
+  const mPorEsc = escenarios.map(e => mants.filter(m=>m.escenarioId===e.id).length);
+
+  return `
+  <div class="grid-4" style="margin-bottom:20px">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#dbeafe">🔧</div>
+      <div><div class="stat-val">${mMes.length}</div><div class="stat-lbl">Mantenimientos este mes</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#d1fae5">🎉</div>
+      <div><div class="stat-val">${eMes.length}</div><div class="stat-lbl">Eventos este mes</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef3c7">🖥️</div>
+      <div><div class="stat-val">${equipos.length}</div><div class="stat-lbl">Equipos registrados</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#ede9fe">🏟️</div>
+      <div><div class="stat-val">${escenarios.filter(e=>e.activo).length}</div><div class="stat-lbl">Escenarios activos</div></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:20px">
+    <div class="card">
+      <div class="section-title">Mantenimientos por Escenario</div>
+      <canvas id="chartMant" height="180"></canvas>
+    </div>
+    <div class="card">
+      <div class="section-title">Distribución de Equipos</div>
+      <canvas id="chartEquip" height="180"></canvas>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title">Próximos Mantenimientos</div>
+      ${proxMant.length ? `<table>
+        <tr><th>Fecha</th><th>Escenario</th><th>Técnico</th></tr>
+        ${proxMant.map(m=>`<tr>
+          <td>${fmtDate(m.fecha)}</td>
+          <td>${escNombre(m.escenarioId)}</td>
+          <td>${m.tecnico||'—'}</td>
+        </tr>`).join('')}
+      </table>` : `<div class="empty-state"><div class="icon">📋</div>Sin mantenimientos programados</div>`}
+    </div>
+    <div class="card">
+      <div class="section-title">Próximos Eventos</div>
+      ${proxEvt.length ? `<table>
+        <tr><th>Fecha</th><th>Evento</th><th>Escenario</th></tr>
+        ${proxEvt.map(e=>`<tr>
+          <td>${fmtDate(e.fecha)}</td>
+          <td>${e.nombre}</td>
+          <td>${escNombre(e.escenarioId)}</td>
+        </tr>`).join('')}
+      </table>` : `<div class="empty-state"><div class="icon">🎉</div>Sin eventos próximos</div>`}
+    </div>
+  </div>
+  `;
+}
+
+function initCharts() {
+  const mants = DB.mantenimientos;
+  const equipos = DB.equipos;
+  const escenarios = DB.escenarios;
+
+  const labels = escenarios.map(e => e.nombre.split(' ').slice(0,3).join(' '));
+  const data = escenarios.map(e => mants.filter(m=>m.escenarioId===e.id).length);
+
+  const ctx1 = document.getElementById('chartMant');
+  if(ctx1) new Chart(ctx1, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Mantenimientos', data, backgroundColor: '#3b82f6' }] },
+    options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 45, font: { size: 9 } } } } }
+  });
+
+  const tipos = ['pantalla','bocina','consola','servidor','otro'];
+  const tipoLabels = ['Pantallas','Bocinas','Consolas','Servidores','Otros'];
+  const tipoData = tipos.map(t => equipos.filter(e=>e.tipo===t).length);
+
+  const ctx2 = document.getElementById('chartEquip');
+  if(ctx2) new Chart(ctx2, {
+    type: 'doughnut',
+    data: { labels: tipoLabels, datasets: [{ data: tipoData, backgroundColor: ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#6b7280'] }] },
+    options: { plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } } }
+  });
+}
+
+// ==================== ESCENARIOS ====================
+function renderEscenarios() {
+  const escenarios = DB.escenarios;
+  const equipos = DB.equipos;
+  const mants = DB.mantenimientos;
+
+  const btn = document.getElementById('topbar-actions');
+  btn.innerHTML = `<button class="btn btn-primary" onclick="modalEscenario()">+ Agregar Escenario</button>`;
+
+  return `
+  <div class="card">
+    <table>
+      <thead><tr><th>#</th><th>Nombre del Escenario</th><th>Descripción</th><th>Equipos</th><th>Mantenimientos</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody>
+        ${escenarios.map((e,i) => `
+        <tr>
+          <td>${i+1}</td>
+          <td style="font-weight:500">${e.nombre}</td>
+          <td>${e.descripcion||'—'}</td>
+          <td><span class="badge badge-blue">${equipos.filter(eq=>eq.escenarioId===e.id).length}</span></td>
+          <td><span class="badge badge-gray">${mants.filter(m=>m.escenarioId===e.id).length}</span></td>
+          <td><span class="badge ${e.activo?'badge-green':'badge-red'}">${e.activo?'Activo':'Inactivo'}</span></td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="modalEscenario(${e.id})">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteEscenario(${e.id})">🗑️</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function modalEscenario(id) {
+  const esc = id ? DB.escenarios.find(e=>e.id===id) : null;
+  openModal(id ? 'Editar Escenario' : 'Nuevo Escenario', `
+    <div class="form-group"><label>Nombre</label><input id="e_nombre" value="${esc?.nombre||''}" placeholder="Nombre del escenario"></div>
+    <div class="form-group"><label>Descripción</label><textarea id="e_desc">${esc?.descripcion||''}</textarea></div>
+    <div class="form-group"><label>Estado</label><select id="e_activo">
+      <option value="1" ${esc?.activo!==false?'selected':''}>Activo</option>
+      <option value="0" ${esc?.activo===false?'selected':''}>Inactivo</option>
+    </select></div>
+  `, () => {
+    const nombre = document.getElementById('e_nombre').value.trim();
+    if(!nombre) return alert('Ingresa el nombre');
+    const arr = DB.escenarios;
+    if(id) {
+      const i = arr.findIndex(e=>e.id===id);
+      arr[i] = { ...arr[i], nombre, descripcion: document.getElementById('e_desc').value, activo: document.getElementById('e_activo').value==='1' };
+    } else {
+      arr.push({ id: DB.nextId(arr), nombre, descripcion: document.getElementById('e_desc').value, activo: true });
+    }
+    DB.escenarios = arr;
+    closeModal(); toast('Escenario guardado'); navigate('escenarios');
+  });
+}
+
+function deleteEscenario(id) {
+  if(!confirm('¿Eliminar este escenario?')) return;
+  DB.escenarios = DB.escenarios.filter(e=>e.id!==id);
+  toast('Escenario eliminado'); navigate('escenarios');
+}
+
+// ==================== EQUIPOS ====================
+function renderEquipos() {
+  const equipos = DB.equipos;
+  const escenarios = DB.escenarios;
+  const btn = document.getElementById('topbar-actions');
+  btn.innerHTML = `<button class="btn btn-primary" onclick="modalEquipo()">+ Agregar Equipo</button>`;
+
+  const opcEsc = escenarios.map(e=>`<option value="${e.id}">${e.nombre.substring(0,40)}</option>`).join('');
+
+  return `
+  <div class="card">
+    <div class="search-bar">
+      <input id="eq-search" placeholder="Buscar equipo..." oninput="filterEquipos()" style="max-width:220px">
+      <select id="eq-filter-esc" onchange="filterEquipos()"><option value="">Todos los escenarios</option>${opcEsc}</select>
+      <select id="eq-filter-tipo" onchange="filterEquipos()">
+        <option value="">Todos los tipos</option>
+        <option value="pantalla">Pantalla COLOSSEO</option>
+        <option value="bocina">Bocina</option>
+        <option value="consola">Consola de Audio</option>
+        <option value="servidor">Servidor</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    <div id="equipos-table">
+      ${renderEquiposTable(equipos)}
+    </div>
+  </div>`;
+}
+
+function renderEquiposTable(equipos) {
+  if(!equipos.length) return `<div class="empty-state"><div class="icon">🖥️</div>No hay equipos registrados</div>`;
+  return `<table>
+    <thead><tr><th>Nombre</th><th>Tipo</th><th>Modelo/Serie</th><th>Escenario</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>
+      ${equipos.map(e=>`<tr>
+        <td style="font-weight:500">${e.nombre}</td>
+        <td>${tipoLabel(e.tipo)}</td>
+        <td style="font-size:.8rem;color:#64748b">${e.modelo||'—'}${e.serie?' / '+e.serie:''}</td>
+        <td>${escNombre(e.escenarioId)}</td>
+        <td><span class="badge ${estadoBadge(e.estado)}">${estadoLabel(e.estado)}</span></td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="modalEquipo(${e.id})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteEquipo(${e.id})">🗑️</button>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function bindEquiposFilter() {}
+function filterEquipos() {
+  let eq = DB.equipos;
+  const s = document.getElementById('eq-search')?.value.toLowerCase();
+  const escId = document.getElementById('eq-filter-esc')?.value;
+  const tipo = document.getElementById('eq-filter-tipo')?.value;
+  if(s) eq = eq.filter(e => e.nombre.toLowerCase().includes(s) || (e.modelo||'').toLowerCase().includes(s));
+  if(escId) eq = eq.filter(e => e.escenarioId==escId);
+  if(tipo) eq = eq.filter(e => e.tipo===tipo);
+  document.getElementById('equipos-table').innerHTML = renderEquiposTable(eq);
+}
+
+function modalEquipo(id) {
+  const eq = id ? DB.equipos.find(e=>e.id===id) : null;
+  const escOpts = DB.escenarios.map(e=>`<option value="${e.id}" ${eq?.escenarioId===e.id?'selected':''}>${e.nombre}</option>`).join('');
+  openModal(id?'Editar Equipo':'Nuevo Equipo', `
+    <div class="grid-2">
+      <div class="form-group"><label>Nombre del Equipo</label><input id="eq_n" value="${eq?.nombre||''}"></div>
+      <div class="form-group"><label>Tipo</label><select id="eq_t">
+        <option value="pantalla" ${eq?.tipo==='pantalla'?'selected':''}>Pantalla COLOSSEO</option>
+        <option value="bocina" ${eq?.tipo==='bocina'?'selected':''}>Bocina</option>
+        <option value="consola" ${eq?.tipo==='consola'?'selected':''}>Consola de Audio</option>
+        <option value="servidor" ${eq?.tipo==='servidor'?'selected':''}>Servidor</option>
+        <option value="otro" ${eq?.tipo==='otro'?'selected':''}>Otro</option>
+      </select></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Modelo</label><input id="eq_m" value="${eq?.modelo||''}"></div>
+      <div class="form-group"><label>Número de Serie</label><input id="eq_s" value="${eq?.serie||''}"></div>
+    </div>
+    <div class="form-group"><label>Escenario</label><select id="eq_e"><option value="">Sin asignar</option>${escOpts}</select></div>
+    <div class="form-group"><label>Estado</label><select id="eq_st">
+      <option value="operativo" ${eq?.estado==='operativo'?'selected':''}>Operativo</option>
+      <option value="mantenimiento" ${eq?.estado==='mantenimiento'?'selected':''}>En Mantenimiento</option>
+      <option value="falla" ${eq?.estado==='falla'?'selected':''}>Falla / Avería</option>
+      <option value="baja" ${eq?.estado==='baja'?'selected':''}>Dado de Baja</option>
+    </select></div>
+    <div class="form-group"><label>Fecha de Instalación</label><input type="date" id="eq_fi" value="${eq?.fechaInst||''}"></div>
+    <div class="form-group"><label>Notas</label><textarea id="eq_no">${eq?.notas||''}</textarea></div>
+  `, () => {
+    const nombre = document.getElementById('eq_n').value.trim();
+    if(!nombre) return alert('Ingresa el nombre');
+    const arr = DB.equipos;
+    const obj = {
+      nombre, tipo: document.getElementById('eq_t').value,
+      modelo: document.getElementById('eq_m').value,
+      serie: document.getElementById('eq_s').value,
+      escenarioId: parseInt(document.getElementById('eq_e').value)||null,
+      estado: document.getElementById('eq_st').value,
+      fechaInst: document.getElementById('eq_fi').value,
+      notas: document.getElementById('eq_no').value
+    };
+    if(id) { const i=arr.findIndex(e=>e.id===id); arr[i]={...arr[i],...obj}; }
+    else arr.push({id:DB.nextId(arr),...obj});
+    DB.equipos = arr;
+    closeModal(); toast('Equipo guardado'); navigate('equipos');
+  });
+}
+
+function deleteEquipo(id) {
+  if(!confirm('¿Eliminar este equipo?')) return;
+  DB.equipos = DB.equipos.filter(e=>e.id!==id);
+  toast('Equipo eliminado'); navigate('equipos');
+}
+
+// ==================== CALENDARIO ====================
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+
+function renderCalendario() {
+  const mants = DB.mantenimientos;
+  const eventos = DB.eventos;
+  const btn = document.getElementById('topbar-actions');
+  btn.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="calPrev()">◀</button>
+    <span id="cal-label" style="margin:0 10px;font-weight:600">${mesNombre(calMonth)} ${calYear}</span>
+    <button class="btn btn-outline btn-sm" onclick="calNext()">▶</button>
+  `;
+  return renderCalGrid(calYear, calMonth, mants, eventos);
+}
+
+function renderCalGrid(year, month, mants, eventos) {
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month+1, 0);
+  const startDay = first.getDay();
+  const today = new Date();
+
+  let html = `<div class="card">
+    <div class="cal-grid">
+      ${['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].map(d=>`<div class="cal-day-hdr">${d}</div>`).join('')}`;
+
+  // empty cells
+  for(let i=0;i<startDay;i++) html+=`<div class="cal-day other-month"></div>`;
+
+  for(let d=1; d<=last.getDate(); d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = today.getDate()===d && today.getMonth()===month && today.getFullYear()===year;
+    const dm = mants.filter(m=>m.fecha===dateStr);
+    const de = eventos.filter(e=>e.fecha===dateStr);
+    html+=`<div class="cal-day ${isToday?'today':''}" onclick="calDayClick('${dateStr}')">
+      <div class="day-num">${d}</div>
+      ${dm.map(()=>`<span class="cal-dot" style="background:#3b82f6" title="Mantenimiento"></span>`).join('')}
+      ${de.map(ev=>`<div style="font-size:.65rem;background:#d1fae5;border-radius:3px;padding:1px 4px;margin-top:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${ev.nombre}</div>`).join('')}
+    </div>`;
+  }
+  html+=`</div></div>
+  <div style="margin-top:12px;display:flex;gap:12px;font-size:.8rem;color:#64748b">
+    <span><span class="cal-dot" style="background:#3b82f6;width:10px;height:10px"></span> Mantenimiento</span>
+    <span><span class="cal-dot" style="background:#10b981;width:10px;height:10px"></span> Evento</span>
+  </div>`;
+  return html;
+}
+
+function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} navigate('calendario'); }
+function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} navigate('calendario'); }
+
+function calDayClick(dateStr) {
+  const mants = DB.mantenimientos.filter(m=>m.fecha===dateStr);
+  const eventos = DB.eventos.filter(e=>e.fecha===dateStr);
+  openModal(`Actividades del ${fmtDate(dateStr)}`, `
+    ${mants.length?`<div style="margin-bottom:10px"><strong>🔧 Mantenimientos</strong>
+      ${mants.map(m=>`<div style="background:#f1f5f9;border-radius:6px;padding:8px;margin-top:6px;font-size:.85rem">
+        <b>${escNombre(m.escenarioId)}</b><br>Técnico: ${m.tecnico||'N/A'}<br>Estado: ${m.estado}
+      </div>`).join('')}
+    </div>`:''}
+    ${eventos.length?`<div><strong>🎉 Eventos</strong>
+      ${eventos.map(e=>`<div style="background:#f1f5f9;border-radius:6px;padding:8px;margin-top:6px;font-size:.85rem">
+        <b>${e.nombre}</b><br>${escNombre(e.escenarioId)}<br>${e.descripcion||''}
+      </div>`).join('')}
+    </div>`:''}
+    ${!mants.length && !eventos.length?`<p style="color:#94a3b8;text-align:center">No hay actividades registradas</p>`:''}
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <button class="btn btn-primary btn-sm" onclick="closeModal();navigate('mantenimiento');setTimeout(()=>modalMantenimiento(null,'${dateStr}'),50)">+ Mantenimiento</button>
+      <button class="btn btn-success btn-sm" onclick="closeModal();navigate('eventos');setTimeout(()=>modalEvento(null,'${dateStr}'),50)">+ Evento</button>
+    </div>
+  `, null);
+}
+
+// ==================== MANTENIMIENTO ====================
+function renderMantenimiento() {
+  const mants = DB.mantenimientos.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const btn = document.getElementById('topbar-actions');
+  btn.innerHTML = `<button class="btn btn-primary" onclick="modalMantenimiento()">+ Registrar Visita</button>`;
+
+  return `<div class="card">
+    <div class="search-bar">
+      <input id="m-search" placeholder="Buscar..." oninput="filterMants()">
+      <select id="m-filter-esc" onchange="filterMants()">
+        <option value="">Todos los escenarios</option>
+        ${DB.escenarios.map(e=>`<option value="${e.id}">${e.nombre.substring(0,40)}</option>`).join('')}
+      </select>
+      <select id="m-filter-est" onchange="filterMants()">
+        <option value="">Todos los estados</option>
+        <option value="completado">Completado</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="en_proceso">En Proceso</option>
+      </select>
+    </div>
+    <div id="mant-table">${renderMantsTable(mants)}</div>
+  </div>`;
+}
+
+function renderMantsTable(mants) {
+  if(!mants.length) return `<div class="empty-state"><div class="icon">🔧</div>No hay registros de mantenimiento</div>`;
+  return `<table>
+    <thead><tr><th>Fecha</th><th>Escenario</th><th>Técnico</th><th>Tipo</th><th>Actividades</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>
+      ${mants.map(m=>`<tr>
+        <td>${fmtDate(m.fecha)}</td>
+        <td>${escNombre(m.escenarioId)}</td>
+        <td>${m.tecnico||'—'}</td>
+        <td><span class="badge ${m.tipo==='preventivo'?'badge-blue':'badge-yellow'}">${m.tipo||'preventivo'}</span></td>
+        <td style="font-size:.8rem;max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${m.actividades||'—'}</td>
+        <td><span class="badge ${m.estado==='completado'?'badge-green':m.estado==='en_proceso'?'badge-yellow':'badge-gray'}">${m.estado}</span></td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="modalMantenimiento(${m.id})">👁️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteMant(${m.id})">🗑️</button>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function filterMants() {
+  let arr = DB.mantenimientos;
+  const s = document.getElementById('m-search')?.value.toLowerCase();
+  const escId = document.getElementById('m-filter-esc')?.value;
+  const est = document.getElementById('m-filter-est')?.value;
+  if(s) arr = arr.filter(m=>(m.tecnico||'').toLowerCase().includes(s)||(m.actividades||'').toLowerCase().includes(s));
+  if(escId) arr = arr.filter(m=>m.escenarioId==escId);
+  if(est) arr = arr.filter(m=>m.estado===est);
+  arr = arr.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  document.getElementById('mant-table').innerHTML = renderMantsTable(arr);
+}
+
+function modalMantenimiento(id, fechaPre) {
+  const m = id ? DB.mantenimientos.find(x=>x.id===id) : null;
+  const escOpts = DB.escenarios.map(e=>`<option value="${e.id}" ${m?.escenarioId===e.id?'selected':''}>${e.nombre}</option>`).join('');
+  const equiposOpts = DB.equipos.map(e=>`<option value="${e.id}" ${(m?.equiposIds||[]).includes(e.id)?'selected':''}>${e.nombre}</option>`).join('');
+
+  openModal(id?'Ver/Editar Mantenimiento':'Nueva Visita de Mantenimiento', `
+    <div class="grid-2">
+      <div class="form-group"><label>Fecha</label><input type="date" id="m_f" value="${m?.fecha||fechaPre||today()}"></div>
+      <div class="form-group"><label>Hora</label><input type="time" id="m_h" value="${m?.hora||'08:00'}"></div>
+    </div>
+    <div class="form-group"><label>Escenario</label><select id="m_e"><option value="">Seleccionar...</option>${escOpts}</select></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Técnico Responsable</label><input id="m_tec" value="${m?.tecnico||''}"></div>
+      <div class="form-group"><label>Tipo de Mantenimiento</label><select id="m_tipo">
+        <option value="preventivo" ${m?.tipo==='preventivo'?'selected':''}>Preventivo</option>
+        <option value="correctivo" ${m?.tipo==='correctivo'?'selected':''}>Correctivo</option>
+        <option value="operativo" ${m?.tipo==='operativo'?'selected':''}>Operativo</option>
+      </select></div>
+    </div>
+    <div class="form-group"><label>Actividades Realizadas</label><textarea id="m_act" rows="4">${m?.actividades||''}</textarea></div>
+    <div class="form-group"><label>Observaciones / Incidencias</label><textarea id="m_obs">${m?.observaciones||''}</textarea></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Estado</label><select id="m_est">
+        <option value="completado" ${m?.estado==='completado'?'selected':''}>Completado</option>
+        <option value="en_proceso" ${m?.estado==='en_proceso'?'selected':''}>En Proceso</option>
+        <option value="pendiente" ${m?.estado==='pendiente'?'selected':''}>Pendiente</option>
+      </select></div>
+      <div class="form-group"><label>Horas Trabajadas</label><input type="number" id="m_hrs" value="${m?.horas||''}" min="0" step="0.5"></div>
+    </div>
+    <div class="form-group"><label>Personal en Sitio</label><input id="m_per" value="${m?.personal||''}" placeholder="Nombres del personal (coma separados)"></div>
+  `, () => {
+    const escId = parseInt(document.getElementById('m_e').value);
+    if(!escId) return alert('Selecciona un escenario');
+    const arr = DB.mantenimientos;
+    const obj = {
+      fecha: document.getElementById('m_f').value,
+      hora: document.getElementById('m_h').value,
+      escenarioId: escId,
+      tecnico: document.getElementById('m_tec').value,
+      tipo: document.getElementById('m_tipo').value,
+      actividades: document.getElementById('m_act').value,
+      observaciones: document.getElementById('m_obs').value,
+      estado: document.getElementById('m_est').value,
+      horas: parseFloat(document.getElementById('m_hrs').value)||0,
+      personal: document.getElementById('m_per').value
+    };
+    if(id) { const i=arr.findIndex(x=>x.id===id); arr[i]={...arr[i],...obj}; }
+    else arr.push({id:DB.nextId(arr),...obj});
+    DB.mantenimientos = arr;
+    closeModal(); toast('Mantenimiento guardado'); navigate('mantenimiento');
+  });
+}
+
+function deleteMant(id) {
+  if(!confirm('¿Eliminar este registro?')) return;
+  DB.mantenimientos = DB.mantenimientos.filter(m=>m.id!==id);
+  toast('Registro eliminado'); navigate('mantenimiento');
+}
+
+// ==================== EVENTOS ====================
+function renderEventos() {
+  const eventos = DB.eventos.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const btn = document.getElementById('topbar-actions');
+  btn.innerHTML = `<button class="btn btn-primary" onclick="modalEvento()">+ Registrar Evento</button>`;
+
+  return `<div class="card">
+    <div id="evt-table">${renderEvtTable(eventos)}</div>
+  </div>`;
+}
+
+function renderEvtTable(eventos) {
+  if(!eventos.length) return `<div class="empty-state"><div class="icon">🎉</div>No hay eventos registrados</div>`;
+  return `<table>
+    <thead><tr><th>Fecha</th><th>Evento</th><th>Escenario</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>
+      ${eventos.map(e=>`<tr>
+        <td>${fmtDate(e.fecha)}</td>
+        <td style="font-weight:500">${e.nombre}</td>
+        <td>${escNombre(e.escenarioId)}</td>
+        <td><span class="badge badge-blue">${e.tipo||'deportivo'}</span></td>
+        <td><span class="badge ${e.estado==='realizado'?'badge-green':e.estado==='cancelado'?'badge-red':'badge-yellow'}">${e.estado||'programado'}</span></td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="modalEvento(${e.id})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteEvt(${e.id})">🗑️</button>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function modalEvento(id, fechaPre) {
+  const e = id ? DB.eventos.find(x=>x.id===id) : null;
+  const escOpts = DB.escenarios.map(s=>`<option value="${s.id}" ${e?.escenarioId===s.id?'selected':''}>${s.nombre}</option>`).join('');
+  openModal(id?'Editar Evento':'Nuevo Evento', `
+    <div class="form-group"><label>Nombre del Evento</label><input id="ev_n" value="${e?.nombre||''}"></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Fecha</label><input type="date" id="ev_f" value="${e?.fecha||fechaPre||today()}"></div>
+      <div class="form-group"><label>Hora</label><input type="time" id="ev_h" value="${e?.hora||'10:00'}"></div>
+    </div>
+    <div class="form-group"><label>Escenario</label><select id="ev_e"><option value="">Seleccionar...</option>${escOpts}</select></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Tipo de Evento</label><select id="ev_t">
+        <option value="deportivo" ${e?.tipo==='deportivo'?'selected':''}>Deportivo</option>
+        <option value="cultural" ${e?.tipo==='cultural'?'selected':''}>Cultural</option>
+        <option value="produccion" ${e?.tipo==='produccion'?'selected':''}>Producción Técnica</option>
+        <option value="otro" ${e?.tipo==='otro'?'selected':''}>Otro</option>
+      </select></div>
+      <div class="form-group"><label>Estado</label><select id="ev_st">
+        <option value="programado" ${e?.estado==='programado'?'selected':''}>Programado</option>
+        <option value="en_curso" ${e?.estado==='en_curso'?'selected':''}>En Curso</option>
+        <option value="realizado" ${e?.estado==='realizado'?'selected':''}>Realizado</option>
+        <option value="cancelado" ${e?.estado==='cancelado'?'selected':''}>Cancelado</option>
+      </select></div>
+    </div>
+    <div class="form-group"><label>Descripción</label><textarea id="ev_d">${e?.descripcion||''}</textarea></div>
+    <div class="form-group"><label>Personal Técnico</label><input id="ev_p" value="${e?.personal||''}" placeholder="Nombres del personal"></div>
+    <div class="form-group"><label>Equipos Utilizados / Notas Técnicas</label><textarea id="ev_eq">${e?.equiposNotas||''}</textarea></div>
+  `, () => {
+    const nombre = document.getElementById('ev_n').value.trim();
+    const escId = parseInt(document.getElementById('ev_e').value);
+    if(!nombre) return alert('Ingresa el nombre');
+    if(!escId) return alert('Selecciona un escenario');
+    const arr = DB.eventos;
+    const obj = {
+      nombre, fecha: document.getElementById('ev_f').value,
+      hora: document.getElementById('ev_h').value,
+      escenarioId: escId,
+      tipo: document.getElementById('ev_t').value,
+      estado: document.getElementById('ev_st').value,
+      descripcion: document.getElementById('ev_d').value,
+      personal: document.getElementById('ev_p').value,
+      equiposNotas: document.getElementById('ev_eq').value
+    };
+    if(id) { const i=arr.findIndex(x=>x.id===id); arr[i]={...arr[i],...obj}; }
+    else arr.push({id:DB.nextId(arr),...obj});
+    DB.eventos = arr;
+    closeModal(); toast('Evento guardado'); navigate('eventos');
+  });
+}
+
+function deleteEvt(id) {
+  if(!confirm('¿Eliminar este evento?')) return;
+  DB.eventos = DB.eventos.filter(e=>e.id!==id);
+  toast('Evento eliminado'); navigate('eventos');
+}
+
+// ==================== REPORTES ====================
+function renderReportes() {
+  const now = new Date();
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const escOpts = DB.escenarios.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
+  const mesOpts = meses.map((m,i)=>`<option value="${i}" ${i===now.getMonth()?'selected':''}>${m}</option>`).join('');
+  const anioOpts = [2026,2025].map(a=>`<option value="${a}" ${a===now.getFullYear()?'selected':''}>${a}</option>`).join('');
+
+  return `
+  <div class="card no-print" style="margin-bottom:16px">
+    <div class="section-title">Generar Reporte Mensual</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div class="form-group" style="margin:0"><label>Mes</label><select id="r_mes">${mesOpts}</select></div>
+      <div class="form-group" style="margin:0"><label>Año</label><select id="r_anio">${anioOpts}</select></div>
+      <div class="form-group" style="margin:0"><label>Escenario</label>
+        <select id="r_esc"><option value="">Todos los escenarios</option>${escOpts}</select></div>
+      <div style="padding-top:20px">
+        <button class="btn btn-primary" onclick="genReporte()">📊 Generar</button>
+        <button class="btn btn-success" onclick="imprimirReporte()">🖨️ Imprimir / PDF</button>
+      </div>
+    </div>
+  </div>
+  <div id="reporte-output"></div>`;
+}
+
+function genReporte() {
+  const mes = parseInt(document.getElementById('r_mes').value);
+  const anio = parseInt(document.getElementById('r_anio').value);
+  const escId = document.getElementById('r_esc').value ? parseInt(document.getElementById('r_esc').value) : null;
+
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mesNom = meses[mes];
+
+  const mants = DB.mantenimientos.filter(m => {
+    const d = new Date(m.fecha);
+    return d.getMonth()===mes && d.getFullYear()===anio && (!escId || m.escenarioId===escId);
+  });
+
+  const eventos = DB.eventos.filter(e => {
+    const d = new Date(e.fecha);
+    return d.getMonth()===mes && d.getFullYear()===anio && (!escId || e.escenarioId===escId);
+  });
+
+  const escenarios = escId ? DB.escenarios.filter(e=>e.id===escId) : DB.escenarios;
+  const totalHoras = mants.reduce((s,m)=>s+(m.horas||0),0);
+  const escNomRep = escId ? escNombre(escId) : 'Todos los Escenarios';
+
+  let html = `
+  <div id="reporte-doc" style="background:white;padding:32px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+    <!-- ENCABEZADO -->
+    <div style="text-align:center;border-bottom:3px solid #1e3a5f;padding-bottom:16px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="text-align:left">
+          <div style="font-size:1.4rem;font-weight:800;color:#1e3a5f">ISATECH S.A.S. de C.V.</div>
+          <div style="font-size:.85rem;color:#64748b">Servicios de Mantenimiento Preventivo y Operativo</div>
+        </div>
+        <div style="text-align:right;font-size:.8rem;color:#64748b">
+          <div>OC: 115/2026 — INDES</div>
+          <div>Valor OC: $94,760.00</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:1.1rem;font-weight:700;color:#1e3a5f">
+        INFORME MENSUAL DE MANTENIMIENTO — ${mesNom.toUpperCase()} ${anio}
+      </div>
+      <div style="font-size:.88rem;color:#475569;margin-top:4px">Escenario: ${escNomRep}</div>
+    </div>
+
+    <!-- RESUMEN -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+      ${[
+        ['🔧 Visitas', mants.length],
+        ['⏱️ Horas', totalHoras.toFixed(1)],
+        ['🎉 Eventos', eventos.length],
+        ['🏟️ Escenarios', escenarios.length]
+      ].map(([l,v])=>`
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:1.5rem;font-weight:700;color:#1e3a5f">${v}</div>
+        <div style="font-size:.75rem;color:#64748b">${l}</div>
+      </div>`).join('')}
+    </div>
+
+    <!-- DETALLE POR ESCENARIO -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:1rem;font-weight:700;color:#1e3a5f;border-bottom:2px solid #e2e8f0;padding-bottom:6px;margin-bottom:12px">
+        1. DETALLE DE MANTENIMIENTOS
+      </div>
+      ${escenarios.map(esc => {
+        const vm = mants.filter(m=>m.escenarioId===esc.id);
+        if(!vm.length) return '';
+        return `
+        <div style="margin-bottom:16px">
+          <div style="font-weight:600;color:#1e3a5f;background:#eff6ff;padding:8px 12px;border-radius:6px;margin-bottom:6px;font-size:.9rem">
+            🏟️ ${esc.nombre}
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:.83rem">
+            <thead>
+              <tr style="background:#f8fafc">
+                <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:left">Fecha</th>
+                <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:left">Técnico</th>
+                <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:left">Tipo</th>
+                <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:left">Actividades</th>
+                <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:left">Estado</th>
+                <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:center">Hrs</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${vm.map(m=>`<tr>
+                <td style="padding:7px 10px;border:1px solid #e2e8f0">${fmtDate(m.fecha)}</td>
+                <td style="padding:7px 10px;border:1px solid #e2e8f0">${m.tecnico||'—'}</td>
+                <td style="padding:7px 10px;border:1px solid #e2e8f0">${m.tipo||'preventivo'}</td>
+                <td style="padding:7px 10px;border:1px solid #e2e8f0">${m.actividades||'—'}</td>
+                <td style="padding:7px 10px;border:1px solid #e2e8f0">${m.estado}</td>
+                <td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:center">${m.horas||0}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+          ${vm.some(m=>m.observaciones)?`<div style="margin-top:6px;font-size:.8rem">
+            <b>Observaciones:</b> ${vm.filter(m=>m.observaciones).map(m=>m.observaciones).join(' | ')}
+          </div>`:''}
+        </div>`;
+      }).join('')}
+      ${!mants.length?`<p style="color:#94a3b8;text-align:center;padding:20px">Sin registros de mantenimiento para este período</p>`:''}
+    </div>
+
+    <!-- EVENTOS -->
+    ${eventos.length?`
+    <div style="margin-bottom:20px">
+      <div style="font-size:1rem;font-weight:700;color:#1e3a5f;border-bottom:2px solid #e2e8f0;padding-bottom:6px;margin-bottom:12px">
+        2. EVENTOS Y PRODUCCIÓN TÉCNICA
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:.83rem">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:left">Fecha</th>
+            <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:left">Evento</th>
+            <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:left">Escenario</th>
+            <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:left">Tipo</th>
+            <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:left">Personal</th>
+            <th style="padding:7px 10px;border:1px solid #e2e8f0;text-align:left">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${eventos.map(e=>`<tr>
+            <td style="padding:7px 10px;border:1px solid #e2e8f0">${fmtDate(e.fecha)}</td>
+            <td style="padding:7px 10px;border:1px solid #e2e8f0;font-weight:500">${e.nombre}</td>
+            <td style="padding:7px 10px;border:1px solid #e2e8f0">${escNombre(e.escenarioId)}</td>
+            <td style="padding:7px 10px;border:1px solid #e2e8f0">${e.tipo||'—'}</td>
+            <td style="padding:7px 10px;border:1px solid #e2e8f0">${e.personal||'—'}</td>
+            <td style="padding:7px 10px;border:1px solid #e2e8f0">${e.estado||'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`:''}
+
+    <!-- FIRMA -->
+    <div style="margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:40px">
+      <div style="border-top:1px solid #1e3a5f;padding-top:8px;text-align:center">
+        <div style="font-size:.8rem;color:#475569">Elaborado por</div>
+        <div style="font-size:.85rem;font-weight:600;margin-top:4px">ISATECH S.A.S. de C.V.</div>
+      </div>
+      <div style="border-top:1px solid #1e3a5f;padding-top:8px;text-align:center">
+        <div style="font-size:.8rem;color:#475569">Revisado / Aprobado por</div>
+        <div style="font-size:.85rem;font-weight:600;margin-top:4px">Lic. Luis Rolando Villeda Pacheco</div>
+        <div style="font-size:.75rem;color:#64748b">Jefe de Unidad de Innovación y Tecnología — INDES</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;font-size:.72rem;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:10px">
+      Generado el ${new Date().toLocaleDateString('es-SV')} • Sistema de Gestión ISATECH • OC 115/2026
+    </div>
+  </div>`;
+
+  document.getElementById('reporte-output').innerHTML = html;
+  toast('Reporte generado correctamente', 'success');
+}
+
+function imprimirReporte() {
+  const doc = document.getElementById('reporte-doc');
+  if(!doc) { alert('Primero genera el reporte'); return; }
+  window.print();
+}
+
+// ==================== HELPERS ====================
+function escNombre(id) {
+  const e = DB.escenarios.find(e=>e.id===id);
+  return e ? e.nombre.substring(0,35)+(e.nombre.length>35?'...':'') : '—';
+}
+function tipoLabel(t) {
+  return {pantalla:'Pantalla COLOSSEO',bocina:'Bocina',consola:'Consola Audio',servidor:'Servidor',otro:'Otro'}[t]||t;
+}
+function estadoBadge(s) {
+  return {operativo:'badge-green',mantenimiento:'badge-yellow',falla:'badge-red',baja:'badge-gray'}[s]||'badge-gray';
+}
+function estadoLabel(s) {
+  return {operativo:'Operativo',mantenimiento:'En Mantenimiento',falla:'Con Falla',baja:'Baja'}[s]||s;
+}
+function fmtDate(d) {
+  if(!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+function mesNombre(m) {
+  return ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][m];
+}
+
+// ==================== MODAL ====================
+function openModal(title, body, onSave) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = body;
+  const footer = document.getElementById('modal-footer');
+  if(onSave) {
+    footer.innerHTML = `
+      <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="(${onSave.toString()})()">Guardar</button>`;
+  } else {
+    footer.innerHTML = `<button class="btn btn-outline" onclick="closeModal()">Cerrar</button>`;
+  }
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.remove('open');
+}
+
+document.getElementById('modal-backdrop').addEventListener('click', function(e) {
+  if(e.target === this) closeModal();
+});
+
+// ==================== TOAST ====================
+function toast(msg, type='') {
+  const t = document.createElement('div');
+  t.className = `toast-msg ${type}`;
+  t.textContent = msg;
+  document.getElementById('toast').appendChild(t);
+  setTimeout(()=>t.remove(), 3000);
+}
+
+// ==================== INIT ====================
+navigate('dashboard');
+</script>
+</body>
+</html>

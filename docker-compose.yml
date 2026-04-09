@@ -1,0 +1,49 @@
+# ── SportPlaner — Development ─────────────────────────────
+# Uso: docker compose up --build
+#
+# URLs:
+#   Frontend:  http://localhost:5173
+#   API (dev): http://localhost:8000
+# ──────────────────────────────────────────────────────────
+
+name: sportplaner-dev
+
+services:
+
+  # ── Laravel API ────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/dev.Dockerfile
+    container_name: sp-api-dev
+    restart: unless-stopped
+    volumes:
+      - ./api:/app                    # hot-reload código PHP
+    environment:
+      APP_NAME: SportPlaner
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_KEY: ""                     # se genera automáticamente al arrancar
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /app/database/database.sqlite
+      LOG_CHANNEL: stderr
+    ports:
+      - "8000:8000"
+
+  # ── Vue / Vite Frontend ────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/dev.Dockerfile
+    container_name: sp-frontend-dev
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app               # hot-reload código Vue
+      - /app/node_modules             # evita sobrescribir node_modules del host
+    environment:
+      VITE_PROXY_TARGET: http://api:8000   # proxy interno Docker → api
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
