@@ -12,28 +12,28 @@
 
     <!-- Filters -->
     <div class="card mb-4">
-      <div class="flex flex-wrap gap-3 items-center">
+      <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 sm:items-center">
         <input
           v-model="filters.search"
-          class="input max-w-xs"
+          class="input col-span-2"
           placeholder="Buscar técnico, actividades…"
           @input="load"
         />
-        <select v-model="filters.escenario_id" class="input w-52" @change="load">
+        <select v-model="filters.escenario_id" class="input" @change="load">
           <option value="">Todos los escenarios</option>
           <option v-for="e in escenarios" :key="e.id" :value="e.id">{{ e.nombre }}</option>
         </select>
-        <select v-model="filters.tecnico_id" class="input w-48" @change="load">
+        <select v-model="filters.tecnico_id" class="input" @change="load">
           <option value="">Todos los técnicos</option>
           <option v-for="t in tecnicos" :key="t.id" :value="t.id">{{ t.nombre_completo }}</option>
         </select>
-        <select v-model="filters.tipo" class="input w-40" @change="load">
+        <select v-model="filters.tipo" class="input" @change="load">
           <option value="">Todos los tipos</option>
           <option value="preventivo">Preventivo</option>
           <option value="correctivo">Correctivo</option>
           <option value="operativo">Operativo</option>
         </select>
-        <select v-model="filters.estado" class="input w-40" @change="load">
+        <select v-model="filters.estado" class="input" @change="load">
           <option value="">Todos los estados</option>
           <option value="completado">Completado</option>
           <option value="en_proceso">En Proceso</option>
@@ -112,7 +112,7 @@
     <!-- Form Modal -->
     <AppModal v-model="showModal" :title="editing ? 'Editar Mantenimiento' : 'Nueva Visita de Mantenimiento'" maxWidth="640px">
       <div class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="label">Fecha *</label>
             <input type="date" v-model="form.fecha" class="input" />
@@ -129,7 +129,7 @@
             <option v-for="e in escenarios" :key="e.id" :value="e.id">{{ e.nombre }}</option>
           </select>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="label">Técnico Responsable</label>
             <select v-model="form.tecnico_id" class="input" @change="onTecnicoChange">
@@ -160,7 +160,7 @@
           <label class="label">Observaciones / Incidencias</label>
           <textarea v-model="form.observaciones" class="input" rows="2" placeholder="Problemas encontrados, pendientes, etc." />
         </div>
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label class="label">Estado *</label>
             <select v-model="form.estado" class="input">

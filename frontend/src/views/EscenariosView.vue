@@ -79,7 +79,7 @@
           <label class="label">Dirección</label>
           <input v-model="form.direccion" class="input" placeholder="Dirección del escenario" />
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="label">Estado</label>
             <select v-model="form.activo" class="input">

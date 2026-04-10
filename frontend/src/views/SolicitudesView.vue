@@ -12,22 +12,22 @@
 
     <!-- Filters -->
     <div class="card mb-4">
-      <div class="flex flex-wrap gap-3 items-center">
-        <input v-model="filters.search" class="input max-w-xs" placeholder="Buscar actividad, solicitante…" @input="load" />
-        <select v-model="filters.prioridad" class="input w-36" @change="load">
+      <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 sm:items-center">
+        <input v-model="filters.search" class="input col-span-2" placeholder="Buscar actividad, solicitante…" @input="load" />
+        <select v-model="filters.prioridad" class="input" @change="load">
           <option value="">Todas las prioridades</option>
           <option value="alto">🔴 Alta</option>
           <option value="medio">🟡 Media</option>
           <option value="bajo">🟢 Baja</option>
         </select>
-        <select v-model="filters.estado" class="input w-40" @change="load">
+        <select v-model="filters.estado" class="input" @change="load">
           <option value="">Todos los estados</option>
           <option value="pendiente">Pendiente</option>
           <option value="en_proceso">En Proceso</option>
           <option value="completado">Completado</option>
           <option value="cancelado">Cancelado</option>
         </select>
-        <select v-model="filters.tecnico_id" class="input w-48" @change="load">
+        <select v-model="filters.tecnico_id" class="input col-span-2 sm:col-span-1" @change="load">
           <option value="">Todos los técnicos</option>
           <option v-for="t in tecnicos" :key="t.id" :value="t.id">{{ t.nombre_completo }}</option>
         </select>
@@ -103,7 +103,7 @@
     <!-- Form Modal -->
     <AppModal v-model="showModal" :title="editing ? 'Editar Solicitud' : 'Nueva Solicitud'" maxWidth="660px">
       <div class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="label">Fecha de Solicitud *</label>
             <input type="date" v-model="form.fecha_solicitud" class="input" />
@@ -136,7 +136,7 @@
           <label class="label">Solicita *</label>
           <input v-model="form.solicita" class="input" placeholder="Nombre del solicitante — ej: Luis Villeda" />
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="label">Fecha Calendarizada</label>
             <input type="date" v-model="form.fecha_calendarizada" class="input" />

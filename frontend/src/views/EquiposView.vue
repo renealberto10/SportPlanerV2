@@ -12,18 +12,18 @@
 
     <!-- Filters -->
     <div class="card mb-4">
-      <div class="flex flex-wrap gap-3 items-center">
+      <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 sm:items-center">
         <input
           v-model="filters.search"
-          class="input max-w-xs"
+          class="input col-span-2"
           placeholder="Buscar nombre, modelo, serie…"
           @input="load"
         />
-        <select v-model="filters.escenario_id" class="input w-52" @change="load">
+        <select v-model="filters.escenario_id" class="input" @change="load">
           <option value="">Todos los escenarios</option>
           <option v-for="e in escenarios" :key="e.id" :value="e.id">{{ e.nombre }}</option>
         </select>
-        <select v-model="filters.tipo" class="input w-44" @change="load">
+        <select v-model="filters.tipo" class="input" @change="load">
           <option value="">Todos los tipos</option>
           <option value="pantalla">Pantalla COLOSSEO</option>
           <option value="bocina">Bocina</option>
@@ -31,14 +31,14 @@
           <option value="servidor">Servidor</option>
           <option value="otro">Otro</option>
         </select>
-        <select v-model="filters.estado" class="input w-44" @change="load">
+        <select v-model="filters.estado" class="input" @change="load">
           <option value="">Todos los estados</option>
           <option value="operativo">Operativo</option>
           <option value="mantenimiento">En Mantenimiento</option>
           <option value="falla">Con Falla</option>
           <option value="baja">Baja</option>
         </select>
-        <button v-if="hasActiveFilters" class="btn btn-ghost btn-sm text-slate-500" @click="clearFilters">
+        <button v-if="hasActiveFilters" class="btn btn-ghost btn-sm text-slate-500 col-span-2 sm:col-span-1" @click="clearFilters">
           ✕ Limpiar filtros
         </button>
       </div>
@@ -96,7 +96,7 @@
 
     <!-- Form Modal -->
     <AppModal v-model="showModal" :title="editing ? 'Editar Equipo' : 'Nuevo Equipo'" maxWidth="600px">
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="col-span-2">
           <label class="label">Nombre del Equipo *</label>
           <input v-model="form.nombre" class="input" placeholder="Nombre descriptivo del equipo" />

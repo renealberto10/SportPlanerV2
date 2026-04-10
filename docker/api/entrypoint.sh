@@ -29,7 +29,6 @@ fi
 echo "[entrypoint] Caching config and routes..."
 php artisan config:cache
 php artisan route:cache
-php artisan view:cache
 
 # ── Fix permissions ───────────────────────────────
 chown -R www-data:www-data /var/www/html/storage \

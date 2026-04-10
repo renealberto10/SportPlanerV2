@@ -8,16 +8,16 @@
       <!-- ── Mobile overlay ─────────────────────────────────── -->
       <Transition name="overlay">
         <div v-if="sidebarOpen"
-             class="fixed inset-0 z-30 bg-black/50 md:hidden"
+             class="fixed inset-0 z-30 bg-black/50 lg:hidden"
              @click="sidebarOpen = false" />
       </Transition>
 
       <!-- ── Sidebar ──────────────────────────────────────────── -->
       <aside id="sidebar"
              :class="['sidebar w-64 flex-shrink-0 flex flex-col',
-                      'fixed inset-y-0 left-0 z-40 md:relative md:z-auto',
+                      'fixed inset-y-0 left-0 z-40 lg:relative lg:z-auto',
                       'transition-transform duration-300 ease-in-out',
-                      sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+                      sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0']">
 
         <!-- Logo mark + close btn -->
         <div class="flex items-center justify-between px-4 py-5 md:px-5"
@@ -34,7 +34,7 @@
           </div>
           <!-- Close button (mobile only) -->
           <button @click="sidebarOpen = false"
-                  class="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
+                  class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
             <XMarkIcon class="w-5 h-5" />
           </button>
         </div>
@@ -126,10 +126,10 @@
           <div class="flex items-center gap-2.5">
             <!-- Hamburger (mobile only) -->
             <button @click="sidebarOpen = true"
-                    class="md:hidden p-2 -ml-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors">
+                    class="lg:hidden p-2 -ml-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors">
               <Bars3Icon class="w-5 h-5" />
             </button>
-            <span class="hidden md:block w-[3px] h-5 rounded-full bg-blue-500 flex-shrink-0"></span>
+            <span class="hidden lg:block w-[3px] h-5 rounded-full bg-blue-500 flex-shrink-0"></span>
             <h1 class="text-sm font-semibold text-slate-900 truncate">{{ pageTitle }}</h1>
           </div>
           <div class="flex items-center gap-3">

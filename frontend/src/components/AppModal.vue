@@ -3,12 +3,12 @@
     <Transition name="modal">
       <div
         v-if="modelValue"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
         style="background:rgba(15,23,42,0.6);backdrop-filter:blur(4px)"
         @click.self="$emit('update:modelValue', false)"
       >
         <div
-          class="bg-white rounded-2xl w-full flex flex-col"
+          class="bg-white w-full flex flex-col rounded-t-2xl sm:rounded-2xl"
           :style="`max-width:${maxWidth || '560px'};max-height:92vh;box-shadow:0 25px 50px -12px rgba(0,0,0,0.35)`"
         >
           <!-- Header -->

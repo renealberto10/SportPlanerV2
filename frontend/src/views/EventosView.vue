@@ -12,12 +12,12 @@
 
     <!-- Filters -->
     <div class="card mb-4">
-      <div class="flex flex-wrap gap-3 items-center">
-        <select v-model="filters.escenario_id" class="input w-52" @change="load">
+      <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 sm:items-center">
+        <select v-model="filters.escenario_id" class="input" @change="load">
           <option value="">Todos los escenarios</option>
           <option v-for="e in escenarios" :key="e.id" :value="e.id">{{ e.nombre }}</option>
         </select>
-        <select v-model="filters.estado" class="input w-40" @change="load">
+        <select v-model="filters.estado" class="input" @change="load">
           <option value="">Todos los estados</option>
           <option value="programado">Programado</option>
           <option value="en_curso">En Curso</option>
@@ -81,7 +81,7 @@
           <label class="label">Nombre del Evento *</label>
           <input v-model="form.nombre" class="input" placeholder="Ej: Final Nacional Fútbol" />
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="label">Fecha *</label>
             <input type="date" v-model="form.fecha" class="input" />
@@ -98,7 +98,7 @@
             <option v-for="e in escenarios" :key="e.id" :value="e.id">{{ e.nombre }}</option>
           </select>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="label">Tipo de Evento</label>
             <select v-model="form.tipo" class="input">

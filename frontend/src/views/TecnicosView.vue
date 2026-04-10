@@ -36,9 +36,9 @@
 
     <!-- Filters -->
     <div class="card mb-4">
-      <div class="flex flex-wrap gap-3 items-center">
-        <input v-model="search" class="input max-w-xs" placeholder="Buscar por nombre o correo…" @input="load" />
-        <select v-model="filtroActivo" class="input w-40" @change="load">
+      <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 sm:items-center">
+        <input v-model="search" class="input col-span-2 sm:max-w-xs" placeholder="Buscar por nombre o correo…" @input="load" />
+        <select v-model="filtroActivo" class="input col-span-2 sm:col-span-1 sm:w-40" @change="load">
           <option value="">Todos</option>
           <option value="1">Solo activos</option>
           <option value="0">Inactivos</option>
@@ -109,7 +109,7 @@
     <!-- Form Modal -->
     <AppModal v-model="showModal" :title="editing ? 'Editar Técnico' : 'Nuevo Técnico'" maxWidth="560px">
       <div class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="label">Nombre *</label>
             <input v-model="form.nombre" class="input" placeholder="Nombre(s)" />
@@ -119,7 +119,7 @@
             <input v-model="form.apellido" class="input" placeholder="Apellido(s)" />
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="label">Teléfono</label>
             <input v-model="form.telefono" class="input" placeholder="7777-1234" />
@@ -129,7 +129,7 @@
             <input type="email" v-model="form.email" class="input" placeholder="tecnico@ejemplo.com" />
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="label">Especialidad *</label>
             <select v-model="form.especialidad" class="input">
