@@ -43,7 +43,6 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget -qO- http://localhost/api/v1/health 2>/dev/null || \
-      wget -qO- http://localhost/ || exit 1
+  CMD wget -qO- http://127.0.0.1/up || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
