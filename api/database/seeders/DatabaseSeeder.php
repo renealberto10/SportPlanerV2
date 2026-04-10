@@ -16,11 +16,13 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // ── Admin user ──────────────────────────────────────
-        User::firstOrCreate(
+        User::updateOrCreate(
             ['email' => 'admin@isatech.sv'],
             [
                 'name'     => 'Administrador ISATECH',
                 'password' => Hash::make('Admin2026!'),
+                'rol'      => 'admin',
+                'activo'   => true,
             ]
         );
 
