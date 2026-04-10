@@ -3,11 +3,11 @@
 #
 # Requisitos previos en el servidor:
 #   1. Red "web" ya existe (creada por traefik-portainer)
-#   2. Copiar .env.prod.example → .env.prod y completar APP_KEY
+#   2. .env con APP_KEY cargado (cp .env.prod .env)
 #   3. DNS: sportplanner.app y www.sportplanner.app → IP del servidor
 #
 # Uso:
-#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#   docker compose -f docker-compose.prod.yml up -d --build
 # ──────────────────────────────────────────────────────────
 
 name: sportplanner-prod
@@ -29,7 +29,6 @@ services:
     build:
       context: .
       dockerfile: docker/api/Dockerfile
-    image: sportplanner/api:latest
     container_name: sp-api
     restart: unless-stopped
     environment:
@@ -56,7 +55,6 @@ services:
     build:
       context: .
       dockerfile: docker/frontend/Dockerfile
-    image: sportplanner/frontend:latest
     container_name: sp-frontend
     restart: unless-stopped
     depends_on:
@@ -73,6 +71,7 @@ services:
       - "traefik.http.routers.sportplaner.entrypoints=websecure"
       - "traefik.http.routers.sportplaner.tls=true"
       - "traefik.http.routers.sportplaner.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.sportplaner.service=sportplaner"
       - "traefik.http.routers.sportplaner.middlewares=sp-security"
       - "traefik.http.services.sportplaner.loadbalancer.server.port=80"
 
@@ -81,11 +80,13 @@ services:
       - "traefik.http.routers.sportplaner-www.entrypoints=websecure"
       - "traefik.http.routers.sportplaner-www.tls=true"
       - "traefik.http.routers.sportplaner-www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.sportplaner-www.service=sportplaner"
       - "traefik.http.routers.sportplaner-www.middlewares=sp-www-redirect"
 
-      # ── HTTP → HTTPS redirect ─────────────────────────
+      # ── HTTP → HTTPS (Let's Encrypt challenge + redirect) ─
       - "traefik.http.routers.sportplaner-http.rule=Host(`sportplanner.app`) || Host(`www.sportplanner.app`)"
       - "traefik.http.routers.sportplaner-http.entrypoints=web"
+      - "traefik.http.routers.sportplaner-http.service=sportplaner"
       - "traefik.http.routers.sportplaner-http.middlewares=sp-https-redirect"
 
       # ── Middlewares ───────────────────────────────────
