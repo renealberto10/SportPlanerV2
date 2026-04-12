@@ -25,6 +25,10 @@
         <span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span>
         <span class="text-slate-500 font-medium">Evento</span>
       </span>
+      <span class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block"></span>
+        <span class="text-slate-500 font-medium">Solicitud</span>
+      </span>
     </div>
 
     <div class="card p-0 overflow-hidden">
@@ -81,6 +85,13 @@
               class="text-xs bg-emerald-100 text-emerald-700 rounded px-1.5 py-0.5 mb-0.5 truncate leading-tight font-medium"
               :title="e.nombre"
             >◎ {{ e.nombre?.substring(0, 16) }}</div>
+
+            <div
+              v-for="s in day.solicitudes"
+              :key="'s' + s.id"
+              class="text-xs bg-amber-100 text-amber-700 rounded px-1.5 py-0.5 mb-0.5 truncate leading-tight font-medium"
+              :title="s.actividad"
+            >📋 {{ s.actividad?.substring(0, 14) }}</div>
           </div>
         </div>
       </template>
@@ -116,7 +127,24 @@
           </div>
         </div>
 
-        <div v-if="!selectedMants.length && !selectedEventos.length"
+        <!-- Solicitudes -->
+        <div v-if="selectedSolicitudes.length">
+          <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">📋 Solicitudes</h4>
+          <div v-for="s in selectedSolicitudes" :key="s.id" class="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5 mb-2">
+            <div class="font-semibold text-slate-900 text-sm">{{ s.actividad }}</div>
+            <div class="text-xs text-slate-500 mt-1">
+              <span class="font-medium">Solicita:</span> {{ s.solicita }}
+              <span v-if="s.hora"> · {{ s.hora }}</span>
+              <span v-if="s.escenario"> · {{ s.escenario.nombre }}</span>
+              <span :class="SOLICITUD_ESTADO_BADGE[s.estado] || 'badge badge-gray'" class="ml-1">{{ SOLICITUD_ESTADOS[s.estado] }}</span>
+            </div>
+            <div v-if="s.tecnico" class="text-xs text-slate-500 mt-1">
+              <span class="font-medium">Técnico:</span> {{ s.tecnico.nombre_completo }}
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!selectedMants.length && !selectedEventos.length && !selectedSolicitudes.length"
              class="text-center py-10 text-slate-400 text-sm">
           Sin actividades registradas para este día
         </div>
@@ -132,24 +160,26 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { mantenimientoApi, eventoApi } from '@/api'
+import { mantenimientoApi, eventoApi, solicitudApi } from '@/api'
 import { useApiError } from '@/composables/useApiError'
-import { MANTENIMIENTO_ESTADO_BADGE, EVENTO_ESTADO_BADGE, MESES } from '@/constants'
-import type { Mantenimiento, Evento } from '@/types'
+import { MANTENIMIENTO_ESTADO_BADGE, EVENTO_ESTADO_BADGE, SOLICITUD_ESTADO_BADGE, SOLICITUD_ESTADOS, MESES } from '@/constants'
+import type { Mantenimiento, Evento, Solicitud } from '@/types'
 import AppModal from '@/components/AppModal.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 
 const { handleError } = useApiError()
 const loading      = ref(true)
-const allMants     = ref<Mantenimiento[]>([])
-const allEventos   = ref<Evento[]>([])
+const allMants       = ref<Mantenimiento[]>([])
+const allEventos     = ref<Evento[]>([])
+const allSolicitudes = ref<Solicitud[]>([])
 const now          = new Date()
 const month        = ref(now.getMonth())
 const year         = ref(now.getFullYear())
 const showDayModal = ref(false)
-const selectedDate    = ref('')
-const selectedMants   = ref<Mantenimiento[]>([])
-const selectedEventos = ref<Evento[]>([])
+const selectedDate       = ref('')
+const selectedMants      = ref<Mantenimiento[]>([])
+const selectedEventos    = ref<Evento[]>([])
+const selectedSolicitudes = ref<Solicitud[]>([])
 
 const days     = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const mesLabel = computed(() => MESES[month.value])
@@ -158,18 +188,22 @@ const calDays = computed(() => {
   const first = new Date(year.value, month.value, 1)
   const last  = new Date(year.value, month.value + 1, 0)
   const today = new Date()
-  const cells: { n: number | string; current: boolean; isToday: boolean; dateStr: string; mants: Mantenimiento[]; eventos: Evento[] }[] = []
+  const cells: {
+    n: number | string; current: boolean; isToday: boolean; dateStr: string
+    mants: Mantenimiento[]; eventos: Evento[]; solicitudes: Solicitud[]
+  }[] = []
 
   for (let i = 0; i < first.getDay(); i++) {
-    cells.push({ n: '', current: false, isToday: false, dateStr: '', mants: [], eventos: [] })
+    cells.push({ n: '', current: false, isToday: false, dateStr: '', mants: [], eventos: [], solicitudes: [] })
   }
   for (let d = 1; d <= last.getDate(); d++) {
     const dateStr = `${year.value}-${String(month.value + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
     cells.push({
       n: d, current: true, dateStr,
       isToday: today.getDate() === d && today.getMonth() === month.value && today.getFullYear() === year.value,
-      mants:   allMants.value.filter(m => m.fecha === dateStr),
-      eventos: allEventos.value.filter(e => e.fecha === dateStr),
+      mants:       allMants.value.filter(m => m.fecha === dateStr),
+      eventos:     allEventos.value.filter(e => e.fecha === dateStr),
+      solicitudes: allSolicitudes.value.filter(s => s.fecha_calendarizada === dateStr),
     })
   }
   return cells
@@ -177,21 +211,26 @@ const calDays = computed(() => {
 
 function dayClick(day: typeof calDays.value[0]) {
   if (!day.current) return
-  selectedDate.value    = day.dateStr
-  selectedMants.value   = day.mants
-  selectedEventos.value = day.eventos
-  showDayModal.value    = true
+  selectedDate.value        = day.dateStr
+  selectedMants.value       = day.mants
+  selectedEventos.value     = day.eventos
+  selectedSolicitudes.value = day.solicitudes
+  showDayModal.value        = true
 }
 
 async function loadData() {
   loading.value = true
   try {
-    const [m, e] = await Promise.all([
+    const [m, e, s] = await Promise.all([
       mantenimientoApi.list({ mes: month.value + 1, anio: year.value }),
       eventoApi.list({ mes: month.value + 1, anio: year.value }),
+      solicitudApi.list(),
     ])
-    allMants.value   = m.data.data
-    allEventos.value = e.data.data
+    allMants.value       = m.data.data
+    allEventos.value     = e.data.data
+    allSolicitudes.value = s.data.data.filter(
+      (sol: Solicitud) => sol.fecha_calendarizada !== null,
+    )
   } catch (e) {
     handleError(e, 'Error al cargar el calendario')
   } finally {

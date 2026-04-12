@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\EventoResource;
 use App\Models\Evento;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class EventoController extends Controller
 {
@@ -68,7 +69,46 @@ class EventoController extends Controller
 
     public function destroy(Evento $evento)
     {
+        foreach ($evento->fotos ?? [] as $path) {
+            Storage::disk('public')->delete($path);
+        }
         $evento->delete();
         return response()->json(['message' => 'Evento eliminado']);
+    }
+
+    public function uploadFoto(Request $request, Evento $evento)
+    {
+        $request->validate([
+            'foto' => 'required|image|max:10240|mimes:jpeg,jpg,png,webp',
+        ]);
+
+        $path = $request->file('foto')->store('eventos/' . $evento->id, 'public');
+        $fotos = $evento->fotos ?? [];
+        $fotos[] = $path;
+        $evento->update(['fotos' => $fotos]);
+
+        return response()->json([
+            'url'   => asset('storage/' . $path),
+            'path'  => $path,
+            'fotos' => collect($evento->fresh()->fotos)->map(fn($p) => [
+                'path' => $p,
+                'url'  => asset('storage/' . $p),
+            ])->values(),
+        ]);
+    }
+
+    public function removeFoto(Request $request, Evento $evento)
+    {
+        $request->validate(['path' => 'required|string']);
+        $fotos = $evento->fotos ?? [];
+        $path  = $request->path;
+
+        if (in_array($path, $fotos)) {
+            Storage::disk('public')->delete($path);
+            $fotos = array_values(array_filter($fotos, fn($f) => $f !== $path));
+            $evento->update(['fotos' => $fotos]);
+        }
+
+        return response()->json(['message' => 'Foto eliminada']);
     }
 }

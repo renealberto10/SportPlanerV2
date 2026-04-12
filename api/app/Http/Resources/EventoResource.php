@@ -21,6 +21,7 @@ class EventoResource extends JsonResource
             'descripcion' => $this->descripcion,
             'personal' => $this->personal,
             'equipos_notas' => $this->equipos_notas,
+            'fotos' => $this->fotos ?? [],
             'created_at' => $this->created_at,
         ];
     }

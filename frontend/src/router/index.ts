@@ -17,6 +17,7 @@ const router = createRouter({
     { path: '/campo/mantenimiento', component: () => import('@/views/campo/FormMantenimientoView.vue'), meta: { title: 'Form. Mantenimiento' } },
     { path: '/campo/evento',        component: () => import('@/views/campo/FormEventoView.vue'),        meta: { title: 'Form. Evento' } },
     { path: '/campo/solicitud',     component: () => import('@/views/campo/FormSolicitudView.vue'),     meta: { title: 'Form. Solicitud' } },
+    { path: '/campo/historial',     component: () => import('@/views/campo/HistorialView.vue'),          meta: { title: 'Historial de Registros' } },
     { path: '/bodega',         component: () => import('@/views/BodegaView.vue'),        meta: { title: 'Bodega — Piezas' } },
     { path: '/reportes',       component: () => import('@/views/ReportesView.vue'),      meta: { title: 'Reportes' } },
     { path: '/usuarios',       component: () => import('@/views/UsersView.vue'),         meta: { title: 'Usuarios', requiresAdmin: true } },

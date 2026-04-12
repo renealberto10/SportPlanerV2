@@ -5,9 +5,11 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void {
-        Schema::table('mantenimientos', function (Blueprint $table) {
-            $table->foreignId('tecnico_id')->nullable()->after('tecnico')->constrained('tecnicos')->nullOnDelete();
-        });
+        if (!Schema::hasColumn('mantenimientos', 'tecnico_id')) {
+            Schema::table('mantenimientos', function (Blueprint $table) {
+                $table->foreignId('tecnico_id')->nullable()->after('tecnico')->constrained('tecnicos')->nullOnDelete();
+            });
+        }
     }
     public function down(): void {
         Schema::table('mantenimientos', function (Blueprint $table) {

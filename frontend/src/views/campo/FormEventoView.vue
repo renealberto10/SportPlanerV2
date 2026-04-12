@@ -270,8 +270,10 @@ async function save() {
       personal:     personalSeleccionado.value.join(', '),
     } as never)
 
-    // Note: eventos don't have foto upload in the current API, so we skip photos
-    // (could be added later like mantenimientos)
+    // Upload photos
+    for (const f of fotos.value) {
+      await eventoApi.uploadFoto(ev.id, f.file)
+    }
 
     // Piezas
     for (const pz of piezas.value) {

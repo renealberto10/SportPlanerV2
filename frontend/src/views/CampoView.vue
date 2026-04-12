@@ -47,6 +47,20 @@
         </div>
         <ChevronRightIcon class="w-5 h-5 text-slate-300 flex-shrink-0" />
       </RouterLink>
+
+      <!-- Historial -->
+      <RouterLink to="/campo/historial"
+        class="flex items-center gap-4 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm
+               hover:border-violet-300 hover:shadow-md transition-all active:scale-[0.98]">
+        <div class="w-14 h-14 rounded-2xl bg-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/30">
+          <ClockIcon class="w-7 h-7 text-white" />
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-slate-900">Historial de Registros</div>
+          <div class="text-sm text-slate-500 mt-0.5">Ver solicitudes y mantenimientos ya guardados</div>
+        </div>
+        <ChevronRightIcon class="w-5 h-5 text-slate-300 flex-shrink-0" />
+      </RouterLink>
     </div>
 
     <!-- Quick tips -->
@@ -62,5 +76,5 @@
 </template>
 
 <script setup lang="ts">
-import { WrenchScrewdriverIcon, StarIcon, ClipboardDocumentListIcon, ChevronRightIcon } from '@heroicons/vue/24/outline'
+import { WrenchScrewdriverIcon, StarIcon, ClipboardDocumentListIcon, ChevronRightIcon, ClockIcon } from '@heroicons/vue/24/outline'
 </script>

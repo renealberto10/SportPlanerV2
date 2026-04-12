@@ -11,7 +11,7 @@ class Solicitud extends Model
     protected $fillable = [
         'fecha_solicitud', 'actividad', 'escenario_id', 'escenario_texto',
         'solicita', 'fecha_calendarizada', 'hora', 'tecnico_id',
-        'seguimiento', 'prioridad', 'estado', 'notas',
+        'seguimiento', 'prioridad', 'estado', 'notas', 'emails_invitar',
     ];
 
     public function escenario() { return $this->belongsTo(Escenario::class); }

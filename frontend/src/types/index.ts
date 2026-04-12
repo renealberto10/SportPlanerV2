@@ -70,6 +70,7 @@ export interface Evento {
   descripcion: string | null
   personal: string | null
   equipos_notas: string | null
+  fotos: string[]
   created_at: string
 }
 
@@ -104,6 +105,7 @@ export interface Solicitud {
   prioridad: 'alto' | 'medio' | 'bajo'
   estado: 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
   notas: string | null
+  emails_invitar: string | null
   created_at: string
 }
 

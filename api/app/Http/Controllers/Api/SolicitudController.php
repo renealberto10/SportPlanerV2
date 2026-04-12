@@ -44,6 +44,7 @@ class SolicitudController extends Controller
             'prioridad'           => 'required|in:alto,medio,bajo',
             'estado'              => 'required|in:pendiente,en_proceso,completado,cancelado',
             'notas'               => 'nullable|string',
+            'emails_invitar'      => 'nullable|string|max:1000',
         ]);
 
         $sol = Solicitud::create($data);
@@ -72,6 +73,7 @@ class SolicitudController extends Controller
             'prioridad'           => 'sometimes|required|in:alto,medio,bajo',
             'estado'              => 'sometimes|required|in:pendiente,en_proceso,completado,cancelado',
             'notas'               => 'nullable|string',
+            'emails_invitar'      => 'nullable|string|max:1000',
         ]);
 
         $solicitud->update($data);

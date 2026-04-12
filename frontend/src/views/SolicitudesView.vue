@@ -170,6 +170,32 @@
           <label class="label">Notas adicionales</label>
           <textarea v-model="form.notas" class="input" rows="2" placeholder="Información extra…" />
         </div>
+
+        <!-- Google Calendar section — visible when fecha_calendarizada is set -->
+        <div v-if="form.fecha_calendarizada" class="rounded-xl border border-blue-100 bg-blue-50/60 p-4 space-y-3">
+          <div class="flex items-center gap-2 text-sm font-semibold text-blue-700">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm0 16H5V8h14v11z"/>
+            </svg>
+            Enviar a Google Calendar
+          </div>
+          <div>
+            <label class="label text-blue-600">Correos a invitar <span class="font-normal text-slate-400">(separados por coma)</span></label>
+            <input v-model="form.emails_invitar" class="input"
+              placeholder="juan@indes.gob.sv, maria@indes.gob.sv" />
+          </div>
+          <button type="button"
+            class="btn w-full justify-center gap-2 bg-white border border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300 font-semibold text-sm py-2.5 rounded-xl transition-colors"
+            @click="openGoogleCalendar">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+            </svg>
+            Abrir en Google Calendar
+          </button>
+          <p class="text-[11px] text-blue-500 leading-snug">
+            Se abrirá Google Calendar con el evento pre-llenado. Guarda el evento ahí para enviar invitaciones por correo.
+          </p>
+        </div>
       </div>
       <template #footer>
         <button class="btn btn-outline" @click="showModal = false">Cancelar</button>
@@ -217,7 +243,7 @@ const filters    = reactive({ search: '', prioridad: '', estado: '', tecnico_id:
 const emptyForm = (): Partial<Solicitud> => ({
   fecha_solicitud: today(), actividad: '', escenario_id: null, escenario_texto: '',
   solicita: '', fecha_calendarizada: null, hora: null, tecnico_id: null,
-  seguimiento: '', prioridad: 'medio', estado: 'pendiente', notas: '',
+  seguimiento: '', prioridad: 'medio', estado: 'pendiente', notas: '', emails_invitar: '',
 })
 const form = ref(emptyForm())
 
@@ -244,13 +270,33 @@ function openForm(s?: Solicitud) {
   showModal.value = true
 }
 
+function buildPayload() {
+  const f = form.value
+  return {
+    fecha_solicitud:     f.fecha_solicitud,
+    actividad:           f.actividad,
+    escenario_id:        f.escenario_id   || null,
+    escenario_texto:     f.escenario_texto || null,
+    solicita:            f.solicita,
+    fecha_calendarizada: f.fecha_calendarizada || null,
+    hora:                f.hora || null,
+    tecnico_id:          f.tecnico_id || null,
+    seguimiento:         f.seguimiento || null,
+    prioridad:           f.prioridad,
+    estado:              f.estado,
+    notas:               f.notas || null,
+    emails_invitar:      f.emails_invitar || null,
+  }
+}
+
 async function save() {
   if (!form.value.actividad) { toast.add('La actividad es requerida', 'error'); return }
   if (!form.value.solicita)  { toast.add('El solicitante es requerido', 'error'); return }
   saving.value = true
   try {
-    if (editing.value) await solicitudApi.update(editing.value.id, form.value as Solicitud)
-    else               await solicitudApi.create(form.value as Solicitud)
+    const payload = buildPayload()
+    if (editing.value) await solicitudApi.update(editing.value.id, payload as Solicitud)
+    else               await solicitudApi.create(payload as Solicitud)
     toast.add('Solicitud guardada correctamente')
     showModal.value = false
     await load()
@@ -273,6 +319,44 @@ async function doDelete() {
   } catch (e) {
     handleError(e, 'Error al eliminar la solicitud')
   }
+}
+
+function openGoogleCalendar() {
+  const f = form.value
+  if (!f.fecha_calendarizada) return
+
+  const dateStr = f.fecha_calendarizada.replace(/-/g, '')
+  let dates: string
+  if (f.hora) {
+    const [h, m] = f.hora.split(':')
+    const startTime = `${dateStr}T${h}${m}00`
+    const endHour   = String(Number(h) + 1).padStart(2, '0')
+    const endTime   = `${dateStr}T${endHour}${m}00`
+    dates = `${startTime}/${endTime}`
+  } else {
+    dates = `${dateStr}/${dateStr}`
+  }
+
+  const escNombre = escenarios.value.find((e: Escenario) => e.id === f.escenario_id)?.nombre
+    ?? f.escenario_texto ?? ''
+
+  const details = [
+    `Solicita: ${f.solicita ?? ''}`,
+    f.seguimiento ? `Seguimiento: ${f.seguimiento}` : '',
+    f.notas       ? `Notas: ${f.notas}`              : '',
+  ].filter(Boolean).join('\n')
+
+  const emails = (f.emails_invitar ?? '').split(',').map(e => e.trim()).filter(Boolean)
+
+  const url = new URL('https://calendar.google.com/calendar/render')
+  url.searchParams.set('action', 'TEMPLATE')
+  url.searchParams.set('text', f.actividad || 'Solicitud de Servicio')
+  url.searchParams.set('dates', dates)
+  if (details)    url.searchParams.set('details', details)
+  if (escNombre)  url.searchParams.set('location', escNombre)
+  if (emails.length) url.searchParams.set('add', emails.join(','))
+
+  window.open(url.toString(), '_blank')
 }
 
 onMounted(async () => {

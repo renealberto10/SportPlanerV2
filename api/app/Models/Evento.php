@@ -9,7 +9,11 @@ class Evento extends Model
 {
     protected $fillable = [
         'escenario_id', 'nombre', 'fecha', 'hora', 'tipo',
-        'estado', 'descripcion', 'personal', 'equipos_notas',
+        'estado', 'descripcion', 'personal', 'equipos_notas', 'fotos',
+    ];
+
+    protected $casts = [
+        'fotos' => 'array',
     ];
 
     public function escenario(): BelongsTo

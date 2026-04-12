@@ -42,6 +42,7 @@
                 <th class="th">Tipo</th>
                 <th class="th">Personal</th>
                 <th class="th">Estado</th>
+                <th class="th">Fotos</th>
                 <th class="th text-right">Acciones</th>
               </tr>
             </thead>
@@ -60,6 +61,14 @@
                   <span :class="EVENTO_ESTADO_BADGE[e.estado] || 'badge badge-gray'">
                     {{ EVENTO_ESTADOS[e.estado] || e.estado }}
                   </span>
+                </td>
+                <td class="td">
+                  <button v-if="e.fotos && e.fotos.length > 0"
+                    class="flex items-center gap-1 text-xs text-blue-600 hover:underline font-medium"
+                    @click="openFotos(e)">
+                    🖼 {{ e.fotos.length }}
+                  </button>
+                  <span v-else class="text-xs text-slate-300">—</span>
                 </td>
                 <td class="td text-right">
                   <div class="flex gap-1 justify-end">
@@ -140,6 +149,21 @@
     </AppModal>
 
     <ConfirmDialog v-model="showConfirm" message="¿Eliminar este evento de la bitácora?" @confirm="doDelete" />
+
+    <!-- Fotos modal -->
+    <AppModal v-model="showFotos" :title="`Fotos — ${fotosEvento?.nombre ?? ''}`" maxWidth="720px">
+      <div v-if="!fotosEvento?.fotos?.length" class="text-center py-10 text-slate-400">Sin fotos registradas</div>
+      <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <a v-for="(path, i) in fotosEvento.fotos" :key="i"
+          :href="`/storage/${path}`" target="_blank"
+          class="block rounded-xl overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors aspect-square">
+          <img :src="`/storage/${path}`" :alt="`Foto ${i + 1}`" class="w-full h-full object-cover" />
+        </a>
+      </div>
+      <template #footer>
+        <button class="btn btn-outline" @click="showFotos = false">Cerrar</button>
+      </template>
+    </AppModal>
   </div>
 </template>
 
@@ -168,6 +192,10 @@ const showModal  = ref(false)
 const showConfirm = ref(false)
 const editing    = ref<Evento | null>(null)
 const toDelete   = ref<Evento | null>(null)
+const showFotos  = ref(false)
+const fotosEvento = ref<Evento | null>(null)
+
+function openFotos(e: Evento) { fotosEvento.value = e; showFotos.value = true }
 const filters    = reactive({ escenario_id: '', estado: '' })
 
 const emptyForm = (): Partial<Evento> => ({

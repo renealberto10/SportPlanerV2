@@ -36,6 +36,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('mantenimientos/{mantenimiento}/fotos',   [MantenimientoController::class, 'uploadFoto']);
     Route::delete('mantenimientos/{mantenimiento}/fotos', [MantenimientoController::class, 'removeFoto']);
     Route::apiResource('eventos',        EventoController::class);
+    Route::post('eventos/{evento}/fotos',   [EventoController::class, 'uploadFoto']);
+    Route::delete('eventos/{evento}/fotos', [EventoController::class, 'removeFoto']);
     Route::apiResource('tecnicos',       TecnicoController::class);
     Route::apiResource('solicitudes',    SolicitudController::class);
     Route::apiResource('cambios-piezas', CambioPiezaController::class);
