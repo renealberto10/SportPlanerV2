@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\SolicitudResource;
 use App\Models\Solicitud;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class SolicitudController extends Controller
 {
@@ -83,7 +84,46 @@ class SolicitudController extends Controller
 
     public function destroy(Solicitud $solicitud)
     {
+        foreach ($solicitud->fotos ?? [] as $path) {
+            Storage::disk('public')->delete($path);
+        }
         $solicitud->delete();
         return response()->json(['message' => 'Solicitud eliminada']);
+    }
+
+    public function uploadFoto(Request $request, Solicitud $solicitud)
+    {
+        $request->validate([
+            'foto' => 'required|image|max:10240|mimes:jpeg,jpg,png,webp',
+        ]);
+
+        $path = $request->file('foto')->store('solicitudes/' . $solicitud->id, 'public');
+        $fotos = $solicitud->fotos ?? [];
+        $fotos[] = $path;
+        $solicitud->update(['fotos' => $fotos]);
+
+        return response()->json([
+            'url'   => asset('storage/' . $path),
+            'path'  => $path,
+            'fotos' => collect($solicitud->fresh()->fotos)->map(fn($p) => [
+                'path' => $p,
+                'url'  => asset('storage/' . $p),
+            ])->values(),
+        ]);
+    }
+
+    public function removeFoto(Request $request, Solicitud $solicitud)
+    {
+        $request->validate(['path' => 'required|string']);
+        $fotos = $solicitud->fotos ?? [];
+        $path  = $request->path;
+
+        if (in_array($path, $fotos)) {
+            Storage::disk('public')->delete($path);
+            $fotos = array_values(array_filter($fotos, fn($f) => $f !== $path));
+            $solicitud->update(['fotos' => $fotos]);
+        }
+
+        return response()->json(['message' => 'Foto eliminada']);
     }
 }

@@ -106,6 +106,7 @@ export interface Solicitud {
   estado: 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
   notas: string | null
   emails_invitar: string | null
+  fotos: string[]
   created_at: string
 }
 

@@ -31,6 +31,7 @@ class SolicitudResource extends JsonResource
             'estado'              => $this->estado,
             'notas'               => $this->notas,
             'emails_invitar'      => $this->emails_invitar,
+            'fotos'               => $this->fotos ?? [],
             'created_at'          => $this->created_at,
         ];
     }

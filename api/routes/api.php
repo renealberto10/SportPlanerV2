@@ -40,6 +40,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::delete('eventos/{evento}/fotos', [EventoController::class, 'removeFoto']);
     Route::apiResource('tecnicos',       TecnicoController::class);
     Route::apiResource('solicitudes',    SolicitudController::class);
+    Route::post('solicitudes/{solicitud}/fotos',   [SolicitudController::class, 'uploadFoto']);
+    Route::delete('solicitudes/{solicitud}/fotos', [SolicitudController::class, 'removeFoto']);
     Route::apiResource('cambios-piezas', CambioPiezaController::class);
     Route::post('cambios-piezas/{cambioPieza}/recepcion', [CambioPiezaController::class, 'confirmarRecepcion']);
 
