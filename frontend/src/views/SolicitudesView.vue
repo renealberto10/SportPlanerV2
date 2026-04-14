@@ -3,107 +3,121 @@
     <div class="page-header">
       <div>
         <h2 class="page-title">Solicitudes de Mantenimiento</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Gestión de solicitudes de mantenimiento</p>
+        <p class="text-xs text-slate-500 mt-0.5">Flujo de trabajo por estado</p>
       </div>
       <button class="btn btn-primary" @click="openForm()">
         <span class="text-base leading-none">+</span> Nueva Solicitud
       </button>
     </div>
 
-    <!-- Filters -->
+    <!-- Search & filters row -->
     <div class="card mb-4">
       <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 sm:items-center">
-        <input v-model="filters.search" class="input col-span-2" placeholder="Buscar actividad, solicitante…" @input="load" />
-        <select v-model="filters.prioridad" class="input" @change="load">
+        <input v-model="search" class="input col-span-2" placeholder="Buscar actividad, solicitante…" />
+        <select v-model="filterPrioridad" class="input">
           <option value="">Todas las prioridades</option>
           <option value="alto">🔴 Alta</option>
           <option value="medio">🟡 Media</option>
           <option value="bajo">🟢 Baja</option>
         </select>
-        <select v-model="filters.estado" class="input" @change="load">
-          <option value="">Todos los estados</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="en_proceso">En Proceso</option>
-          <option value="completado">Completado</option>
-          <option value="cancelado">Cancelado</option>
-        </select>
-        <select v-model="filters.tecnico_id" class="input col-span-2 sm:col-span-1" @change="load">
-          <option value="">Todos los técnicos</option>
+        <select v-model="filterTecnico" class="input col-span-2 sm:col-span-1">
+          <option :value="null">Todos los técnicos</option>
           <option v-for="t in tecnicos" :key="t.id" :value="t.id">{{ t.nombre_completo }}</option>
         </select>
       </div>
     </div>
 
-    <div class="card">
+    <!-- Status tabs -->
+    <div class="flex gap-1 mb-4 bg-white rounded-xl border border-slate-200 p-1">
+      <button v-for="tab in TABS" :key="tab.estado"
+              class="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium transition-all"
+              :class="activeTab === tab.estado
+                ? tab.activeClass
+                : 'text-slate-500 hover:bg-slate-50'"
+              @click="activeTab = tab.estado">
+        <span>{{ tab.label }}</span>
+        <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-[11px] font-bold"
+              :class="activeTab === tab.estado ? tab.countClass : 'bg-slate-100 text-slate-500'">
+          {{ tabCount(tab.estado) }}
+        </span>
+      </button>
+    </div>
+
+    <!-- Content area -->
+    <div>
       <LoadingSpinner v-if="loading" />
       <template v-else>
-        <EmptyState v-if="!items.length" icon="📋" title="Sin solicitudes" subtitle="Agrega la primera solicitud de mantenimiento" />
-        <div v-else class="overflow-x-auto">
-          <table class="w-full">
-            <thead>
-              <tr>
-                <th class="th">#</th>
-                <th class="th">Fecha</th>
-                <th class="th">Actividad</th>
-                <th class="th">Escenario</th>
-                <th class="th">Solicita</th>
-                <th class="th">Calendarizada</th>
-                <th class="th">Técnico</th>
-                <th class="th">Prioridad</th>
-                <th class="th">Estado</th>
-                <th class="th text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="s in items" :key="s.id">
-                <td class="td text-slate-400 text-xs font-mono">{{ s.id }}</td>
-                <td class="td whitespace-nowrap text-sm">{{ fmtDate(s.fecha_solicitud) }}</td>
-                <td class="td max-w-[200px]">
-                  <p class="text-sm text-slate-800 line-clamp-2 leading-snug">{{ s.actividad }}</p>
-                </td>
-                <td class="td text-slate-600 text-sm max-w-[140px] truncate">
-                  {{ s.escenario?.nombre || s.escenario_texto || '—' }}
-                </td>
-                <td class="td text-slate-600 text-sm whitespace-nowrap">{{ s.solicita }}</td>
-                <td class="td whitespace-nowrap text-sm">
-                  <span v-if="s.fecha_calendarizada" class="font-medium text-blue-600">{{ fmtDate(s.fecha_calendarizada) }}</span>
-                  <span v-else class="text-slate-300">—</span>
-                </td>
-                <td class="td">
-                  <div v-if="s.tecnico" class="flex items-center gap-1.5">
-                    <div class="w-6 h-6 rounded-md flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                         :style="`background:${avatarColor(s.tecnico.nombre_completo)}`">
-                      {{ s.tecnico.nombre_completo[0] }}
-                    </div>
-                    <span class="text-xs text-slate-700">{{ s.tecnico.nombre_completo }}</span>
-                  </div>
-                  <button v-else class="text-xs text-blue-500 hover:text-blue-700 font-medium" @click="openForm(s)">
-                    + Asignar
-                  </button>
-                </td>
-                <td class="td">
-                  <span :class="SOLICITUD_PRIORIDAD_BADGE[s.prioridad]">{{ s.prioridad.toUpperCase() }}</span>
-                </td>
-                <td class="td">
-                  <span :class="SOLICITUD_ESTADO_BADGE[s.estado]">{{ SOLICITUD_ESTADOS[s.estado] }}</span>
-                </td>
-                <td class="td text-right">
-                  <div class="flex gap-1 justify-end items-center">
-                    <button class="btn btn-ghost btn-sm btn-icon text-slate-400 hover:text-amber-600 relative"
-                            title="Fotos" @click="openFotos(s)">
-                      <CameraIcon class="w-4 h-4" />
-                      <span v-if="s.fotos?.length"
-                            class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
-                        {{ s.fotos.length }}
-                      </span>
-                    </button>
-                    <button v-if="auth.isAdmin || auth.isTecnico" class="btn btn-ghost btn-sm btn-icon text-slate-500 hover:text-blue-600" title="Editar" @click="openForm(s)">✏</button>
-                    <button v-if="auth.isAdmin" class="btn btn-ghost btn-sm btn-icon text-slate-500 hover:text-red-600" title="Eliminar" @click="confirmDelete(s)">✕</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <EmptyState v-if="!filteredItems.length"
+                    icon="📋"
+                    :title="emptyTitle"
+                    subtitle="Cambia el estado en el formulario de edición para mover solicitudes aquí" />
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div v-for="s in filteredItems" :key="s.id"
+               class="card hover:shadow-md transition-shadow group"
+               style="cursor:default">
+            <!-- Card header -->
+            <div class="flex items-start justify-between gap-2 mb-3">
+              <div class="flex-1 min-w-0 cursor-pointer" @click="openForm(s)">
+                <p class="text-sm font-semibold text-slate-800 leading-snug line-clamp-2">{{ s.actividad }}</p>
+                <p class="text-xs text-slate-400 mt-0.5">{{ s.escenario?.nombre || s.escenario_texto || '—' }}</p>
+              </div>
+              <span :class="SOLICITUD_PRIORIDAD_BADGE[s.prioridad]" class="flex-shrink-0">{{ s.prioridad.toUpperCase() }}</span>
+            </div>
+
+            <!-- Meta info -->
+            <div class="space-y-1.5 text-xs text-slate-500">
+              <div class="flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span>{{ s.solicita }}</span>
+              </div>
+
+              <div v-if="s.tecnico" class="flex items-center gap-1.5">
+                <div class="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center text-white text-[8px] font-bold"
+                     :style="`background:${avatarColor(s.tecnico.nombre_completo)}`">
+                  {{ s.tecnico.nombre_completo[0] }}
+                </div>
+                <span>{{ s.tecnico.nombre_completo }}</span>
+              </div>
+              <div v-else class="flex items-center gap-1 text-amber-500 font-medium">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span>Sin técnico asignado</span>
+              </div>
+
+              <div v-if="s.fecha_calendarizada" class="flex items-center gap-1.5 text-blue-600 font-medium">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span>{{ fmtDate(s.fecha_calendarizada) }}<span v-if="s.hora"> · {{ s.hora }}</span></span>
+              </div>
+            </div>
+
+            <!-- Card footer -->
+            <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+              <span class="text-[11px] text-slate-400">{{ fmtDate(s.fecha_solicitud) }} · #{{ s.id }}</span>
+              <div class="flex gap-1 items-center">
+                <button class="btn btn-ghost btn-sm btn-icon text-slate-400 hover:text-amber-600 relative"
+                        title="Fotos" @click="openFotos(s)">
+                  <CameraIcon class="w-4 h-4" />
+                  <span v-if="s.fotos?.length"
+                        class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                    {{ s.fotos.length }}
+                  </span>
+                </button>
+                <button v-if="auth.isAdmin || auth.isTecnico"
+                        class="btn btn-ghost btn-sm btn-icon text-slate-500 hover:text-blue-600"
+                        title="Editar" @click="openForm(s)">✏</button>
+                <button v-if="auth.isAdmin"
+                        class="btn btn-ghost btn-sm btn-icon text-slate-500 hover:text-red-600"
+                        title="Eliminar" @click="confirmDelete(s)">✕</button>
+              </div>
+            </div>
+          </div>
         </div>
       </template>
     </div>
@@ -161,15 +175,24 @@
             <option v-for="t in tecnicos" :key="t.id" :value="t.id">{{ t.nombre_completo }}</option>
           </select>
         </div>
-        <div>
-          <label class="label">Estado</label>
-          <select v-model="form.estado" class="input">
-            <option value="pendiente">Pendiente</option>
-            <option value="en_proceso">En Proceso</option>
-            <option value="completado">Completado</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
+
+        <!-- Estado — highlighted so it's clear this moves the card -->
+        <div class="rounded-xl border-2 border-slate-200 p-3 bg-slate-50/50">
+          <label class="label font-semibold text-slate-700">Estado de la Solicitud</label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+            <label v-for="tab in TABS" :key="tab.estado"
+                   class="flex items-center gap-2 rounded-lg border-2 px-3 py-2 cursor-pointer transition-all text-sm font-medium"
+                   :class="form.estado === tab.estado
+                     ? tab.selectedClass
+                     : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'">
+              <input type="radio" v-model="form.estado" :value="tab.estado" class="sr-only" />
+              <span class="text-base leading-none">{{ tab.icon }}</span>
+              <span>{{ tab.label }}</span>
+            </label>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-2">Al guardar, la solicitud aparecerá en la sección correspondiente.</p>
         </div>
+
         <div>
           <label class="label">Seguimiento del Técnico</label>
           <textarea v-model="form.seguimiento" class="input" rows="2" placeholder="Notas de seguimiento, avances…" />
@@ -264,14 +287,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { CameraIcon } from '@heroicons/vue/24/outline'
 import { solicitudApi, escenarioApi, tecnicoApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 import { useApiError } from '@/composables/useApiError'
 import {
-  SOLICITUD_PRIORIDAD_BADGE, SOLICITUD_ESTADO_BADGE, SOLICITUD_ESTADOS,
+  SOLICITUD_PRIORIDAD_BADGE,
   avatarColor, fmtDate, today,
 } from '@/constants'
 import type { Solicitud, Escenario, Tecnico } from '@/types'
@@ -284,6 +307,49 @@ const toast = useToastStore()
 const auth  = useAuthStore()
 const { handleError } = useApiError()
 
+// ── Status tab definitions ─────────────────────────────────
+const TABS = [
+  {
+    estado: 'pendiente',
+    label: 'Pendiente',
+    icon: '🟡',
+    activeClass: 'bg-amber-50 text-amber-700 border border-amber-200',
+    countClass: 'bg-amber-200 text-amber-800',
+    selectedClass: 'border-amber-400 bg-amber-50 text-amber-700',
+  },
+  {
+    estado: 'en_proceso',
+    label: 'En Proceso',
+    icon: '🔵',
+    activeClass: 'bg-blue-50 text-blue-700 border border-blue-200',
+    countClass: 'bg-blue-200 text-blue-800',
+    selectedClass: 'border-blue-400 bg-blue-50 text-blue-700',
+  },
+  {
+    estado: 'completado',
+    label: 'Completado',
+    icon: '🟢',
+    activeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    countClass: 'bg-emerald-200 text-emerald-800',
+    selectedClass: 'border-emerald-400 bg-emerald-50 text-emerald-700',
+  },
+  {
+    estado: 'cancelado',
+    label: 'Cancelado',
+    icon: '🔴',
+    activeClass: 'bg-red-50 text-red-700 border border-red-200',
+    countClass: 'bg-red-200 text-red-800',
+    selectedClass: 'border-red-400 bg-red-50 text-red-700',
+  },
+] as const
+
+type TabEstado = typeof TABS[number]['estado']
+
+const activeTab       = ref<TabEstado>('pendiente')
+const search          = ref('')
+const filterPrioridad = ref('')
+const filterTecnico   = ref<number | null>(null)
+
 const items      = ref<Solicitud[]>([])
 const escenarios = ref<Escenario[]>([])
 const tecnicos   = ref<Tecnico[]>([])
@@ -293,7 +359,33 @@ const showModal  = ref(false)
 const showConfirm = ref(false)
 const editing    = ref<Solicitud | null>(null)
 const toDelete   = ref<Solicitud | null>(null)
-const filters    = reactive({ search: '', prioridad: '', estado: '', tecnico_id: '' })
+
+// ── Derived counts (uses all items, not filtered) ──────────
+function tabCount(estado: TabEstado) {
+  return items.value.filter(s => s.estado === estado).length
+}
+
+// ── Filtered items for active tab ──────────────────────────
+const filteredItems = computed(() => {
+  let list = items.value.filter(s => s.estado === activeTab.value)
+  if (search.value.trim()) {
+    const q = search.value.toLowerCase()
+    list = list.filter(s =>
+      s.actividad?.toLowerCase().includes(q) ||
+      s.solicita?.toLowerCase().includes(q) ||
+      s.escenario?.nombre?.toLowerCase().includes(q) ||
+      s.escenario_texto?.toLowerCase().includes(q)
+    )
+  }
+  if (filterPrioridad.value) list = list.filter(s => s.prioridad === filterPrioridad.value)
+  if (filterTecnico.value)   list = list.filter(s => s.tecnico_id === filterTecnico.value)
+  return list
+})
+
+const emptyTitle = computed(() => {
+  const tab = TABS.find(t => t.estado === activeTab.value)
+  return `Sin solicitudes ${tab?.label.toLowerCase() ?? ''}`
+})
 
 // ── Photos ─────────────────────────────────────────────────
 const showFotos     = ref(false)
@@ -325,22 +417,18 @@ async function deleteFoto(path: string) {
   } catch (err) { handleError(err, 'Error al eliminar la foto') }
 }
 
+// ── Form ───────────────────────────────────────────────────
 const emptyForm = (): Partial<Solicitud> => ({
   fecha_solicitud: today(), actividad: '', escenario_id: null, escenario_texto: '',
   solicita: '', fecha_calendarizada: null, hora: null, tecnico_id: null,
-  seguimiento: '', prioridad: 'medio', estado: 'pendiente', notas: '', emails_invitar: '',
+  seguimiento: '', prioridad: 'medio', estado: activeTab.value, notas: '', emails_invitar: '',
 })
 const form = ref(emptyForm())
 
 async function load() {
   loading.value = true
   try {
-    const params: Record<string, unknown> = {}
-    if (filters.search)     params.search = filters.search
-    if (filters.prioridad)  params.prioridad = filters.prioridad
-    if (filters.estado)     params.estado = filters.estado
-    if (filters.tecnico_id) params.tecnico_id = filters.tecnico_id
-    const { data } = await solicitudApi.list(params)
+    const { data } = await solicitudApi.list()
     items.value = data.data
   } catch (e) {
     handleError(e, 'Error al cargar solicitudes')
@@ -380,10 +468,16 @@ async function save() {
   saving.value = true
   try {
     const payload = buildPayload()
-    if (editing.value) await solicitudApi.update(editing.value.id, payload as Solicitud)
-    else               await solicitudApi.create(payload as Solicitud)
+    const newEstado = payload.estado as TabEstado
+    if (editing.value) {
+      await solicitudApi.update(editing.value.id, payload as Solicitud)
+    } else {
+      await solicitudApi.create(payload as Solicitud)
+    }
     toast.add('Solicitud guardada correctamente')
     showModal.value = false
+    // Switch to the tab matching the saved estado so user sees the card
+    activeTab.value = newEstado
     await load()
   } catch (e) {
     handleError(e, 'Error al guardar la solicitud')
