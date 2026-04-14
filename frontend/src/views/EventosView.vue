@@ -63,12 +63,14 @@
                   </span>
                 </td>
                 <td class="td">
-                  <button v-if="e.fotos && e.fotos.length > 0"
-                    class="flex items-center gap-1 text-xs text-blue-600 hover:underline font-medium"
-                    @click="openFotos(e)">
-                    🖼 {{ e.fotos.length }}
+                  <button class="btn btn-ghost btn-sm btn-icon text-slate-400 hover:text-emerald-600 relative"
+                          title="Fotos" @click="openFotos(e)">
+                    <CameraIcon class="w-4 h-4" />
+                    <span v-if="e.fotos?.length"
+                          class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                      {{ e.fotos.length }}
+                    </span>
                   </button>
-                  <span v-else class="text-xs text-slate-300">—</span>
                 </td>
                 <td class="td text-right">
                   <div class="flex gap-1 justify-end">
@@ -150,25 +152,61 @@
 
     <ConfirmDialog v-model="showConfirm" message="¿Eliminar este evento de la bitácora?" @confirm="doDelete" />
 
-    <!-- Fotos modal -->
-    <AppModal v-model="showFotos" :title="`Fotos — ${fotosEvento?.nombre ?? ''}`" maxWidth="720px">
-      <div v-if="!fotosEvento?.fotos?.length" class="text-center py-10 text-slate-400">Sin fotos registradas</div>
-      <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <a v-for="(path, i) in fotosEvento.fotos" :key="i"
-          :href="`/storage/${path}`" target="_blank"
-          class="block rounded-xl overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors aspect-square">
-          <img :src="`/storage/${path}`" :alt="`Foto ${i + 1}`" class="w-full h-full object-cover" />
-        </a>
-      </div>
-      <template #footer>
-        <button class="btn btn-outline" @click="showFotos = false">Cerrar</button>
-      </template>
-    </AppModal>
+    <!-- Photo Manager Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showFotos" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style="background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)"
+             @click.self="showFotos = false">
+          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style="max-height:90vh">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div>
+                <div class="font-semibold text-slate-900 text-sm">Registro Fotográfico</div>
+                <div class="text-xs text-slate-400 mt-0.5">{{ fotosEvento?.nombre }} · {{ fmtDate(fotosEvento?.fecha || '') }}</div>
+              </div>
+              <button class="btn btn-ghost btn-sm btn-icon text-slate-400 hover:text-slate-700" @click="showFotos = false">✕</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+              <label class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-xl p-6 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/40 transition-all mb-5"
+                     :class="{ 'opacity-50 pointer-events-none': uploadingFoto }">
+                <CameraIcon class="w-8 h-8 text-slate-300" />
+                <span class="text-sm text-slate-500 font-medium">{{ uploadingFoto ? 'Subiendo foto…' : 'Clic o arrastra una foto aquí' }}</span>
+                <span class="text-xs text-slate-400">JPG, PNG, WebP — máx. 10 MB</span>
+                <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
+                       :disabled="uploadingFoto" @change="handleFotoUpload" />
+              </label>
+              <div v-if="currentFotos.length" class="grid grid-cols-3 gap-3">
+                <div v-for="(foto, i) in currentFotos" :key="i"
+                     class="relative group rounded-xl overflow-hidden bg-slate-100 aspect-[4/3]">
+                  <img :src="foto.url" class="w-full h-full object-cover" />
+                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2">
+                    <a :href="foto.url" target="_blank"
+                       class="opacity-0 group-hover:opacity-100 transition-all btn btn-sm bg-white/90 text-slate-700">
+                      Ver
+                    </a>
+                    <button v-if="auth.isAdmin"
+                            class="opacity-0 group-hover:opacity-100 transition-all btn btn-danger btn-sm"
+                            @click="deleteFoto(foto.path)">Eliminar</button>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="text-center py-8 text-slate-400 text-sm">
+                Sin fotos adjuntas — agrega fotos del evento
+              </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-100 text-xs text-slate-400 text-right">
+              {{ currentFotos.length }} foto{{ currentFotos.length !== 1 ? 's' : '' }}
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { CameraIcon } from '@heroicons/vue/24/outline'
 import { useAuthStore } from '@/stores/auth'
 import { eventoApi, escenarioApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
@@ -192,10 +230,37 @@ const showModal  = ref(false)
 const showConfirm = ref(false)
 const editing    = ref<Evento | null>(null)
 const toDelete   = ref<Evento | null>(null)
-const showFotos  = ref(false)
-const fotosEvento = ref<Evento | null>(null)
+const showFotos     = ref(false)
+const fotosEvento   = ref<Evento | null>(null)
+const uploadingFoto = ref(false)
+const currentFotos  = computed(() =>
+  (fotosEvento.value?.fotos ?? []).map(p => ({ path: p, url: `/storage/${p}` }))
+)
 
 function openFotos(e: Evento) { fotosEvento.value = e; showFotos.value = true }
+
+async function handleFotoUpload(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file || !fotosEvento.value) return
+  uploadingFoto.value = true
+  try {
+    const res = await eventoApi.uploadFoto(fotosEvento.value.id, file)
+    fotosEvento.value.fotos = res.data.fotos.map((f: { path: string }) => f.path)
+    const idx = items.value.findIndex(ev => ev.id === fotosEvento.value!.id)
+    if (idx !== -1) items.value[idx].fotos = fotosEvento.value.fotos
+  } catch (err) { handleError(err, 'Error al subir la foto') }
+  finally { uploadingFoto.value = false; (e.target as HTMLInputElement).value = '' }
+}
+
+async function deleteFoto(path: string) {
+  if (!fotosEvento.value) return
+  try {
+    await eventoApi.removeFoto(fotosEvento.value.id, path)
+    fotosEvento.value.fotos = fotosEvento.value.fotos.filter(f => f !== path)
+    const idx = items.value.findIndex(ev => ev.id === fotosEvento.value!.id)
+    if (idx !== -1) items.value[idx].fotos = fotosEvento.value.fotos
+  } catch (err) { handleError(err, 'Error al eliminar la foto') }
+}
 const filters    = reactive({ escenario_id: '', estado: '' })
 
 const emptyForm = (): Partial<Evento> => ({

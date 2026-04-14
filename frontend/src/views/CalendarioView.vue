@@ -104,7 +104,13 @@
         <div v-if="selectedMants.length">
           <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">⚙ Mantenimientos</h4>
           <div v-for="m in selectedMants" :key="m.id" class="rounded-xl border border-blue-100 bg-blue-50/50 p-3.5 mb-2">
-            <div class="font-semibold text-slate-900 text-sm">{{ m.escenario?.nombre }}</div>
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-semibold text-slate-900 text-sm">{{ m.escenario?.nombre }}</div>
+              <button class="flex-shrink-0 text-[11px] text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 bg-blue-100 hover:bg-blue-200 rounded-lg px-2 py-1 transition-colors"
+                      @click="openGcal(m.fecha, m.hora, `Mantenimiento — ${m.escenario?.nombre}`, m.actividades, m.escenario?.nombre)">
+                📅 Google Cal
+              </button>
+            </div>
             <div class="text-xs text-slate-500 mt-1">
               <span class="font-medium">Técnico:</span> {{ m.tecnico || 'N/A' }} ·
               <span class="font-medium">Tipo:</span> {{ m.tipo }} ·
@@ -118,7 +124,13 @@
         <div v-if="selectedEventos.length">
           <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">◎ Eventos</h4>
           <div v-for="e in selectedEventos" :key="e.id" class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3.5 mb-2">
-            <div class="font-semibold text-slate-900 text-sm">{{ e.nombre }}</div>
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-semibold text-slate-900 text-sm">{{ e.nombre }}</div>
+              <button class="flex-shrink-0 text-[11px] text-emerald-600 hover:text-emerald-800 font-medium flex items-center gap-1 bg-emerald-100 hover:bg-emerald-200 rounded-lg px-2 py-1 transition-colors"
+                      @click="openGcal(e.fecha, e.hora, e.nombre, e.descripcion, e.escenario?.nombre)">
+                📅 Google Cal
+              </button>
+            </div>
             <div class="text-xs text-slate-500 mt-1">
               {{ e.escenario?.nombre }} · {{ e.hora || '' }} ·
               <span :class="EVENTO_ESTADO_BADGE[e.estado] || 'badge badge-gray'" class="ml-1">{{ e.estado }}</span>
@@ -131,15 +143,33 @@
         <div v-if="selectedSolicitudes.length">
           <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">📋 Solicitudes</h4>
           <div v-for="s in selectedSolicitudes" :key="s.id" class="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5 mb-2">
-            <div class="font-semibold text-slate-900 text-sm">{{ s.actividad }}</div>
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-semibold text-slate-900 text-sm">{{ s.actividad }}</div>
+              <span :class="SOLICITUD_ESTADO_BADGE[s.estado] || 'badge badge-gray'" class="flex-shrink-0 text-[10px]">{{ SOLICITUD_ESTADOS[s.estado] }}</span>
+            </div>
             <div class="text-xs text-slate-500 mt-1">
               <span class="font-medium">Solicita:</span> {{ s.solicita }}
               <span v-if="s.hora"> · {{ s.hora }}</span>
               <span v-if="s.escenario"> · {{ s.escenario.nombre }}</span>
-              <span :class="SOLICITUD_ESTADO_BADGE[s.estado] || 'badge badge-gray'" class="ml-1">{{ SOLICITUD_ESTADOS[s.estado] }}</span>
             </div>
             <div v-if="s.tecnico" class="text-xs text-slate-500 mt-1">
               <span class="font-medium">Técnico:</span> {{ s.tecnico.nombre_completo }}
+            </div>
+            <!-- Google Calendar for solicitudes -->
+            <div class="mt-2.5 pt-2.5 border-t border-amber-100">
+              <div class="text-[11px] text-amber-700 font-medium mb-1.5">Invitar por correo (separados por coma):</div>
+              <div class="flex gap-2">
+                <input
+                  v-model="gcalEmails[s.id]"
+                  class="input text-xs py-1 flex-1"
+                  placeholder="correo1@indes.gob.sv, correo2@..."
+                />
+                <button
+                  class="flex-shrink-0 text-[11px] text-amber-700 font-medium flex items-center gap-1 bg-amber-200 hover:bg-amber-300 rounded-lg px-2.5 py-1 transition-colors"
+                  @click="openGcal(s.fecha_calendarizada || '', s.hora, s.actividad, `Solicita: ${s.solicita}`, s.escenario?.nombre, gcalEmails[s.id])">
+                  📅 Google Cal
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -180,6 +210,7 @@ const selectedDate       = ref('')
 const selectedMants      = ref<Mantenimiento[]>([])
 const selectedEventos    = ref<Evento[]>([])
 const selectedSolicitudes = ref<Solicitud[]>([])
+const gcalEmails = ref<Record<number, string>>({})
 
 const days     = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 const mesLabel = computed(() => MESES[month.value])
@@ -236,6 +267,34 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+}
+
+function openGcal(
+  fecha: string,
+  hora: string | null | undefined,
+  title: string,
+  details: string | null | undefined,
+  location: string | null | undefined,
+  emails?: string,
+) {
+  const dateStr = fecha.replace(/-/g, '')
+  let dates: string
+  if (hora) {
+    const [h, m] = hora.split(':')
+    const start = `${dateStr}T${h}${m}00`
+    const end   = `${dateStr}T${String(Number(h) + 1).padStart(2, '0')}${m}00`
+    dates = `${start}/${end}`
+  } else {
+    dates = `${dateStr}/${dateStr}`
+  }
+  const url = new URL('https://calendar.google.com/calendar/render')
+  url.searchParams.set('action', 'TEMPLATE')
+  url.searchParams.set('text', title)
+  url.searchParams.set('dates', dates)
+  if (details)  url.searchParams.set('details', details)
+  if (location) url.searchParams.set('location', location)
+  if (emails)   url.searchParams.set('add', emails)
+  window.open(url.toString(), '_blank')
 }
 
 function prevMonth() {

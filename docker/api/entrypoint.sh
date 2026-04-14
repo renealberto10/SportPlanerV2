@@ -28,7 +28,10 @@ fi
 # ── Ensure required storage directories exist ─────
 # (Docker volume overwrites image-layer dirs; they must be recreated at runtime)
 mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views
-mkdir -p storage/logs bootstrap/cache
+mkdir -p storage/logs bootstrap/cache storage/app/public
+
+# ── Storage symlink (public/storage → storage/app/public) ─
+php artisan storage:link --force 2>/dev/null || true
 
 # ── Cache config & routes ─────────────────────────
 echo "[entrypoint] Caching config and routes..."
