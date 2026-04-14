@@ -80,7 +80,7 @@ export const mantenimientoApi = {
     form.append('foto', file)
     return api.post<{ url: string; path: string; fotos: Array<{ path: string; url: string }> }>(
       `/mantenimientos/${id}/fotos`, form,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
+      { headers: { 'Content-Type': undefined } },
     )
   },
   removeFoto: (id: number, path: string) =>
@@ -98,7 +98,7 @@ export const eventoApi = {
     form.append('foto', file)
     return api.post<{ url: string; path: string; fotos: Array<{ path: string; url: string }> }>(
       `/eventos/${id}/fotos`, form,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
+      { headers: { 'Content-Type': undefined } },
     )
   },
   removeFoto: (id: number, path: string) =>
@@ -129,7 +129,7 @@ export const solicitudApi = {
     form.append('foto', file)
     return api.post<{ url: string; path: string; fotos: Array<{ path: string; url: string }> }>(
       `/solicitudes/${id}/fotos`, form,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
+      { headers: { 'Content-Type': undefined } },
     )
   },
   removeFoto: (id: number, path: string) =>
