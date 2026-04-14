@@ -264,15 +264,16 @@ async function save() {
   if (!form.value.escenario_id)  { toast.add('Selecciona un escenario', 'error'); return }
   saving.value = true
   try {
-    const { data: ev } = await eventoApi.create({
+    const { data: evResp } = await eventoApi.create({
       ...form.value,
       escenario_id: form.value.escenario_id!,
       personal:     personalSeleccionado.value.join(', '),
     } as never)
+    const evId: number = (evResp as any).data?.id ?? (evResp as any).id
 
     // Upload photos
     for (const f of fotos.value) {
-      await eventoApi.uploadFoto(ev.id, f.file)
+      await eventoApi.uploadFoto(evId, f.file)
     }
 
     // Piezas
@@ -280,7 +281,7 @@ async function save() {
       if (!pz.descripcion_pieza.trim()) continue
       await cambioPiezaApi.create({
         escenario_id:     form.value.escenario_id!,
-        evento_id:        ev.id,
+        evento_id:        evId,
         mantenimiento_id: null,
         equipo_id:        null,
         descripcion_pieza: pz.descripcion_pieza,

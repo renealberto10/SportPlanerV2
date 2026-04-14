@@ -216,9 +216,9 @@ async function save() {
       actividad: `[${tipoSolicitud.value.toUpperCase()}] ${form.value.actividad}`,
     }
     const res = await solicitudApi.create(payload as never)
-    const sol = res.data as { id: number }
+    const solId: number = (res.data as any).data?.id ?? (res.data as any).id
     for (const f of fotos.value) {
-      await solicitudApi.uploadFoto(sol.id, f.file)
+      await solicitudApi.uploadFoto(solId, f.file)
     }
     toast.add(`Solicitud enviada — ${fotos.value.length > 0 ? fotos.value.length + ' foto(s) adjunta(s)' : 'sin fotos'}`)
     router.push('/campo')

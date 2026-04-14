@@ -1,28 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"   stop-color="#5b78f6"/>
-      <stop offset="100%" stop-color="#3d5af1"/>
-    </linearGradient>
-    <clipPath id="clip">
-      <rect width="32" height="32" rx="7" ry="7"/>
-    </clipPath>
-  </defs>
+  <!-- Dark rounded square background -->
+  <rect width="32" height="32" rx="7" fill="#0c1322"/>
 
-  <!-- Background rounded square -->
-  <rect width="32" height="32" rx="7" ry="7" fill="url(#g)"/>
+  <!-- Green field -->
+  <rect x="2.5" y="6" width="27" height="20" rx="4" fill="#15803d"/>
 
-  <!-- Subtle top-left highlight -->
-  <rect width="32" height="32" rx="7" ry="7" fill="white" opacity="0.08" clip-path="url(#clip)"/>
+  <!-- Field outer white border -->
+  <rect x="4" y="7.5" width="24" height="17" rx="2.5" fill="none" stroke="rgba(255,255,255,0.80)" stroke-width="0.8"/>
 
-  <!-- "SP" text -->
-  <text
-    x="16" y="22"
-    text-anchor="middle"
-    font-family="system-ui, -apple-system, sans-serif"
-    font-size="14"
-    font-weight="900"
-    fill="white"
-    letter-spacing="-0.5"
-  >SP</text>
+  <!-- Halfway line -->
+  <line x1="16" y1="7.5" x2="16" y2="24.5" stroke="rgba(255,255,255,0.80)" stroke-width="0.8"/>
+
+  <!-- Center circle -->
+  <circle cx="16" cy="16" r="4.5" fill="none" stroke="rgba(255,255,255,0.80)" stroke-width="0.8"/>
+
+  <!-- Center dot -->
+  <circle cx="16" cy="16" r="1" fill="white" opacity="0.90"/>
+
+  <!-- Left penalty area -->
+  <rect x="4" y="11" width="6.5" height="10" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="0.7"/>
+
+  <!-- Right penalty area -->
+  <rect x="21.5" y="11" width="6.5" height="10" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="0.7"/>
+
+  <!-- Left goal -->
+  <rect x="4" y="13.2" width="2.8" height="5.6" fill="none" stroke="rgba(255,255,255,0.50)" stroke-width="0.6"/>
+
+  <!-- Right goal -->
+  <rect x="25.2" y="13.2" width="2.8" height="5.6" fill="none" stroke="rgba(255,255,255,0.50)" stroke-width="0.6"/>
 </svg>
