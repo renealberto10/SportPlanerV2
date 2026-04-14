@@ -10,34 +10,40 @@
       </button>
     </div>
 
-    <!-- Search & filters row -->
-    <div class="card mb-4">
-      <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 sm:items-center">
-        <input v-model="search" class="input col-span-2" placeholder="Buscar actividad, solicitante…" />
-        <select v-model="filterPrioridad" class="input">
-          <option value="">Todas las prioridades</option>
-          <option value="alto">🔴 Alta</option>
-          <option value="medio">🟡 Media</option>
-          <option value="bajo">🟢 Baja</option>
-        </select>
-        <select v-model="filterTecnico" class="input col-span-2 sm:col-span-1">
-          <option :value="null">Todos los técnicos</option>
-          <option v-for="t in tecnicos" :key="t.id" :value="t.id">{{ t.nombre_completo }}</option>
-        </select>
+    <!-- Controls: search + filters (no card wrapper) -->
+    <div class="flex flex-col sm:flex-row gap-2 mb-3">
+      <div class="relative flex-1">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input v-model="search" class="input pl-9" placeholder="Buscar actividad, solicitante, escenario…" />
       </div>
+      <select v-model="filterPrioridad" class="input sm:w-44">
+        <option value="">Todas las prioridades</option>
+        <option value="alto">🔴 Alta</option>
+        <option value="medio">🟡 Media</option>
+        <option value="bajo">🟢 Baja</option>
+      </select>
+      <select v-model="filterTecnico" class="input sm:w-48">
+        <option :value="null">Todos los técnicos</option>
+        <option v-for="t in tecnicos" :key="t.id" :value="t.id">{{ t.nombre_completo }}</option>
+      </select>
     </div>
 
     <!-- Status tabs -->
-    <div class="flex gap-1 mb-4 bg-white rounded-xl border border-slate-200 p-1">
+    <div class="flex mb-4 bg-slate-100 rounded-xl p-1 gap-1">
       <button v-for="tab in TABS" :key="tab.estado"
-              class="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium transition-all"
+              class="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all"
               :class="activeTab === tab.estado
-                ? tab.activeClass
-                : 'text-slate-500 hover:bg-slate-50'"
+                ? 'bg-white shadow-sm ' + tab.textClass
+                : 'text-slate-400 hover:text-slate-600'"
               @click="activeTab = tab.estado">
-        <span>{{ tab.label }}</span>
-        <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-[11px] font-bold"
-              :class="activeTab === tab.estado ? tab.countClass : 'bg-slate-100 text-slate-500'">
+        <span class="hidden sm:inline">{{ tab.label }}</span>
+        <span class="sm:hidden">{{ tab.shortLabel }}</span>
+        <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold"
+              :class="activeTab === tab.estado ? tab.countClass : 'bg-slate-200 text-slate-500'">
           {{ tabCount(tab.estado) }}
         </span>
       </button>
@@ -50,59 +56,63 @@
         <EmptyState v-if="!filteredItems.length"
                     icon="📋"
                     :title="emptyTitle"
-                    subtitle="Cambia el estado en el formulario de edición para mover solicitudes aquí" />
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    subtitle="Edita una solicitud y cambia su estado para verla aquí" />
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           <div v-for="s in filteredItems" :key="s.id"
-               class="card hover:shadow-md transition-shadow group"
-               style="cursor:default">
-            <!-- Card header -->
-            <div class="flex items-start justify-between gap-2 mb-3">
-              <div class="flex-1 min-w-0 cursor-pointer" @click="openForm(s)">
-                <p class="text-sm font-semibold text-slate-800 leading-snug line-clamp-2">{{ s.actividad }}</p>
-                <p class="text-xs text-slate-400 mt-0.5">{{ s.escenario?.nombre || s.escenario_texto || '—' }}</p>
+               class="bg-white rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all cursor-pointer overflow-hidden flex flex-col"
+               :style="`border-left: 4px solid ${PRIORITY_COLOR[s.prioridad]}`"
+               @click="openForm(s)">
+            <!-- Card body -->
+            <div class="p-4 flex-1">
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <p class="text-sm font-semibold text-slate-800 leading-snug line-clamp-2 flex-1">{{ s.actividad }}</p>
+                <span :class="SOLICITUD_PRIORIDAD_BADGE[s.prioridad]" class="flex-shrink-0 text-[10px]">{{ s.prioridad.toUpperCase() }}</span>
               </div>
-              <span :class="SOLICITUD_PRIORIDAD_BADGE[s.prioridad]" class="flex-shrink-0">{{ s.prioridad.toUpperCase() }}</span>
-            </div>
-
-            <!-- Meta info -->
-            <div class="space-y-1.5 text-xs text-slate-500">
-              <div class="flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              <p class="text-xs text-slate-400 mb-3">
+                <svg class="inline w-3 h-3 mr-0.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
-                <span>{{ s.solicita }}</span>
-              </div>
+                {{ s.escenario?.nombre || s.escenario_texto || 'Sin escenario' }}
+              </p>
 
-              <div v-if="s.tecnico" class="flex items-center gap-1.5">
-                <div class="w-3.5 h-3.5 rounded flex-shrink-0 flex items-center justify-center text-white text-[8px] font-bold"
-                     :style="`background:${avatarColor(s.tecnico.nombre_completo)}`">
-                  {{ s.tecnico.nombre_completo[0] }}
+              <div class="space-y-1.5 text-xs text-slate-500">
+                <div class="flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                  </svg>
+                  <span>{{ s.solicita }}</span>
                 </div>
-                <span>{{ s.tecnico.nombre_completo }}</span>
-              </div>
-              <div v-else class="flex items-center gap-1 text-amber-500 font-medium">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                <span>Sin técnico asignado</span>
-              </div>
 
-              <div v-if="s.fecha_calendarizada" class="flex items-center gap-1.5 text-blue-600 font-medium">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-                <span>{{ fmtDate(s.fecha_calendarizada) }}<span v-if="s.hora"> · {{ s.hora }}</span></span>
+                <div v-if="s.tecnico" class="flex items-center gap-1.5">
+                  <div class="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-white text-[9px] font-bold"
+                       :style="`background:${avatarColor(s.tecnico.nombre_completo)}`">
+                    {{ s.tecnico.nombre_completo[0] }}
+                  </div>
+                  <span class="font-medium text-slate-600">{{ s.tecnico.nombre_completo }}</span>
+                </div>
+                <div v-else class="flex items-center gap-1.5 text-amber-500 font-medium">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <span>Sin técnico asignado</span>
+                </div>
+
+                <div v-if="s.fecha_calendarizada" class="flex items-center gap-1.5 text-blue-600 font-medium">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                  <span>{{ fmtDate(s.fecha_calendarizada) }}<span v-if="s.hora"> · {{ s.hora }}</span></span>
+                </div>
               </div>
             </div>
 
             <!-- Card footer -->
-            <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+            <div class="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-t border-slate-100" @click.stop>
               <span class="text-[11px] text-slate-400">{{ fmtDate(s.fecha_solicitud) }} · #{{ s.id }}</span>
-              <div class="flex gap-1 items-center">
+              <div class="flex gap-0.5 items-center">
                 <button class="btn btn-ghost btn-sm btn-icon text-slate-400 hover:text-amber-600 relative"
-                        title="Fotos" @click="openFotos(s)">
+                        title="Fotos" @click.stop="openFotos(s)">
                   <CameraIcon class="w-4 h-4" />
                   <span v-if="s.fotos?.length"
                         class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
@@ -110,11 +120,11 @@
                   </span>
                 </button>
                 <button v-if="auth.isAdmin || auth.isTecnico"
-                        class="btn btn-ghost btn-sm btn-icon text-slate-500 hover:text-blue-600"
-                        title="Editar" @click="openForm(s)">✏</button>
+                        class="btn btn-ghost btn-sm btn-icon text-slate-400 hover:text-blue-600"
+                        title="Editar" @click.stop="openForm(s)">✏</button>
                 <button v-if="auth.isAdmin"
-                        class="btn btn-ghost btn-sm btn-icon text-slate-500 hover:text-red-600"
-                        title="Eliminar" @click="confirmDelete(s)">✕</button>
+                        class="btn btn-ghost btn-sm btn-icon text-slate-400 hover:text-red-600"
+                        title="Eliminar" @click.stop="confirmDelete(s)">✕</button>
               </div>
             </div>
           </div>
@@ -312,36 +322,51 @@ const TABS = [
   {
     estado: 'pendiente',
     label: 'Pendiente',
+    shortLabel: 'Pend.',
     icon: '🟡',
-    activeClass: 'bg-amber-50 text-amber-700 border border-amber-200',
-    countClass: 'bg-amber-200 text-amber-800',
+    textClass: 'text-amber-600',
+    activeClass: 'bg-white shadow-sm text-amber-600',
+    countClass: 'bg-amber-100 text-amber-700',
     selectedClass: 'border-amber-400 bg-amber-50 text-amber-700',
   },
   {
     estado: 'en_proceso',
     label: 'En Proceso',
+    shortLabel: 'Proc.',
     icon: '🔵',
-    activeClass: 'bg-blue-50 text-blue-700 border border-blue-200',
-    countClass: 'bg-blue-200 text-blue-800',
+    textClass: 'text-blue-600',
+    activeClass: 'bg-white shadow-sm text-blue-600',
+    countClass: 'bg-blue-100 text-blue-700',
     selectedClass: 'border-blue-400 bg-blue-50 text-blue-700',
   },
   {
     estado: 'completado',
     label: 'Completado',
+    shortLabel: 'Comp.',
     icon: '🟢',
-    activeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    countClass: 'bg-emerald-200 text-emerald-800',
+    textClass: 'text-emerald-600',
+    activeClass: 'bg-white shadow-sm text-emerald-600',
+    countClass: 'bg-emerald-100 text-emerald-700',
     selectedClass: 'border-emerald-400 bg-emerald-50 text-emerald-700',
   },
   {
     estado: 'cancelado',
     label: 'Cancelado',
+    shortLabel: 'Canc.',
     icon: '🔴',
-    activeClass: 'bg-red-50 text-red-700 border border-red-200',
-    countClass: 'bg-red-200 text-red-800',
+    textClass: 'text-red-500',
+    activeClass: 'bg-white shadow-sm text-red-500',
+    countClass: 'bg-red-100 text-red-600',
     selectedClass: 'border-red-400 bg-red-50 text-red-700',
   },
 ] as const
+
+// Left-border priority color for cards
+const PRIORITY_COLOR: Record<string, string> = {
+  alto:  '#ef4444',
+  medio: '#f59e0b',
+  bajo:  '#22c55e',
+}
 
 type TabEstado = typeof TABS[number]['estado']
 

@@ -10,27 +10,33 @@
       </button>
     </div>
 
-    <!-- Filters -->
-    <div class="card mb-4">
-      <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 sm:items-center">
-        <select v-model="filters.escenario_id" class="input" @change="load">
-          <option value="">Todos los escenarios</option>
-          <option v-for="e in escenarios" :key="e.id" :value="e.id">{{ e.nombre }}</option>
-        </select>
-        <select v-model="filters.estado" class="input" @change="load">
-          <option value="">Todos los estados</option>
-          <option value="programado">Programado</option>
-          <option value="en_curso">En Curso</option>
-          <option value="realizado">Realizado</option>
-          <option value="cancelado">Cancelado</option>
-        </select>
+    <!-- Controls -->
+    <div class="flex flex-col sm:flex-row gap-2 mb-4">
+      <div class="relative flex-1">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input v-model="search" class="input pl-9" placeholder="Buscar nombre, personal…" />
       </div>
+      <select v-model="filterEscenario" class="input sm:w-52">
+        <option value="">Todos los escenarios</option>
+        <option v-for="e in escenarios" :key="e.id" :value="e.id">{{ e.nombre }}</option>
+      </select>
+      <select v-model="filterEstado" class="input sm:w-44">
+        <option value="">Todos los estados</option>
+        <option value="programado">Programado</option>
+        <option value="en_curso">En Curso</option>
+        <option value="realizado">Realizado</option>
+        <option value="cancelado">Cancelado</option>
+      </select>
     </div>
 
     <div class="card">
       <LoadingSpinner v-if="loading" />
       <template v-else>
-        <EmptyState v-if="!items.length" icon="◎" title="No hay eventos registrados" subtitle="Registra el primer evento técnico" />
+        <EmptyState v-if="!filteredItems.length" icon="◎" title="No hay eventos registrados" subtitle="Registra el primer evento técnico" />
         <div v-else class="overflow-x-auto">
           <table class="w-full">
             <thead>
@@ -47,7 +53,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="e in items" :key="e.id">
+              <tr v-for="e in filteredItems" :key="e.id">
                 <td class="td font-medium text-emerald-600 whitespace-nowrap">{{ fmtDate(e.fecha) }}</td>
                 <td class="td text-slate-500 text-sm">{{ e.hora || '—' }}</td>
                 <td class="td">
@@ -181,18 +187,14 @@
                   <img :src="foto.url" class="w-full h-full object-cover" />
                   <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2">
                     <a :href="foto.url" target="_blank"
-                       class="opacity-0 group-hover:opacity-100 transition-all btn btn-sm bg-white/90 text-slate-700">
-                      Ver
-                    </a>
+                       class="opacity-0 group-hover:opacity-100 transition-all btn btn-sm bg-white/90 text-slate-700">Ver</a>
                     <button v-if="auth.isAdmin"
                             class="opacity-0 group-hover:opacity-100 transition-all btn btn-danger btn-sm"
                             @click="deleteFoto(foto.path)">Eliminar</button>
                   </div>
                 </div>
               </div>
-              <div v-else class="text-center py-8 text-slate-400 text-sm">
-                Sin fotos adjuntas — agrega fotos del evento
-              </div>
+              <div v-else class="text-center py-8 text-slate-400 text-sm">Sin fotos adjuntas — agrega fotos del evento</div>
             </div>
             <div class="px-6 py-4 border-t border-slate-100 text-xs text-slate-400 text-right">
               {{ currentFotos.length }} foto{{ currentFotos.length !== 1 ? 's' : '' }}
@@ -205,7 +207,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { CameraIcon } from '@heroicons/vue/24/outline'
 import { useAuthStore } from '@/stores/auth'
 import { eventoApi, escenarioApi } from '@/api'
@@ -233,7 +235,28 @@ const toDelete   = ref<Evento | null>(null)
 const showFotos     = ref(false)
 const fotosEvento   = ref<Evento | null>(null)
 const uploadingFoto = ref(false)
-const currentFotos  = computed(() =>
+
+// ── Client-side filters (no server-filter by estado — prevents disappearing items) ──
+const search         = ref('')
+const filterEscenario = ref<number | ''>('')
+const filterEstado   = ref('')
+
+const filteredItems = computed(() => {
+  let list = items.value
+  if (search.value.trim()) {
+    const q = search.value.toLowerCase()
+    list = list.filter(e =>
+      e.nombre?.toLowerCase().includes(q) ||
+      e.personal?.toLowerCase().includes(q) ||
+      e.escenario?.nombre?.toLowerCase().includes(q)
+    )
+  }
+  if (filterEscenario.value) list = list.filter(e => e.escenario_id === Number(filterEscenario.value))
+  if (filterEstado.value)    list = list.filter(e => e.estado === filterEstado.value)
+  return list
+})
+
+const currentFotos = computed(() =>
   (fotosEvento.value?.fotos ?? []).map(p => ({ path: p, url: `/storage/${p}` }))
 )
 
@@ -261,7 +284,6 @@ async function deleteFoto(path: string) {
     if (idx !== -1) items.value[idx].fotos = fotosEvento.value.fotos
   } catch (err) { handleError(err, 'Error al eliminar la foto') }
 }
-const filters    = reactive({ escenario_id: '', estado: '' })
 
 const emptyForm = (): Partial<Evento> => ({
   nombre: '', fecha: today(), hora: '10:00', escenario_id: undefined,
@@ -269,13 +291,11 @@ const emptyForm = (): Partial<Evento> => ({
 })
 const form = ref(emptyForm())
 
+// Load ALL events — filtering is done client-side so edits never disappear
 async function load() {
   loading.value = true
   try {
-    const params: Record<string, unknown> = {}
-    if (filters.escenario_id) params.escenario_id = filters.escenario_id
-    if (filters.estado)       params.estado = filters.estado
-    const { data } = await eventoApi.list(params)
+    const { data } = await eventoApi.list()
     items.value = data.data
   } catch (e) {
     handleError(e, 'Error al cargar eventos')
@@ -286,7 +306,19 @@ async function load() {
 
 function openForm(e?: Evento) {
   editing.value = e || null
-  form.value = e ? { ...e } : emptyForm()
+  form.value = e
+    ? {
+        nombre: e.nombre,
+        fecha: e.fecha,
+        hora: e.hora,
+        escenario_id: e.escenario_id,
+        tipo: e.tipo,
+        estado: e.estado,
+        descripcion: e.descripcion,
+        personal: e.personal,
+        equipos_notas: e.equipos_notas,
+      }
+    : emptyForm()
   showModal.value = true
 }
 
@@ -295,8 +327,22 @@ async function save() {
   if (!form.value.escenario_id)   { toast.add('Selecciona un escenario', 'error'); return }
   saving.value = true
   try {
-    if (editing.value) await eventoApi.update(editing.value.id, form.value as Evento)
-    else               await eventoApi.create(form.value as Evento)
+    const payload = {
+      nombre:        form.value.nombre,
+      fecha:         form.value.fecha,
+      hora:          form.value.hora || null,
+      escenario_id:  form.value.escenario_id,
+      tipo:          form.value.tipo,
+      estado:        form.value.estado,
+      descripcion:   form.value.descripcion || null,
+      personal:      form.value.personal || null,
+      equipos_notas: form.value.equipos_notas || null,
+    }
+    if (editing.value) {
+      await eventoApi.update(editing.value.id, payload as Evento)
+    } else {
+      await eventoApi.create(payload as Evento)
+    }
     toast.add('Evento guardado correctamente')
     showModal.value = false
     await load()
