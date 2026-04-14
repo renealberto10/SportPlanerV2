@@ -88,9 +88,17 @@
                   <span :class="SOLICITUD_ESTADO_BADGE[s.estado]">{{ SOLICITUD_ESTADOS[s.estado] }}</span>
                 </td>
                 <td class="td text-right">
-                  <div class="flex gap-1 justify-end">
-                    <button v-if="auth.isAdmin" class="btn btn-ghost btn-sm btn-icon text-slate-500 hover:text-blue-600" title="Editar" @click="openForm(s)">✏</button>
-                    <button v-if="auth.isAdmin || s.estado === 'pendiente'" class="btn btn-ghost btn-sm btn-icon text-slate-500 hover:text-red-600" title="Eliminar" @click="confirmDelete(s)">✕</button>
+                  <div class="flex gap-1 justify-end items-center">
+                    <button class="btn btn-ghost btn-sm btn-icon text-slate-400 hover:text-amber-600 relative"
+                            title="Fotos" @click="openFotos(s)">
+                      <CameraIcon class="w-4 h-4" />
+                      <span v-if="s.fotos?.length"
+                            class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                        {{ s.fotos.length }}
+                      </span>
+                    </button>
+                    <button v-if="auth.isAdmin || auth.isTecnico" class="btn btn-ghost btn-sm btn-icon text-slate-500 hover:text-blue-600" title="Editar" @click="openForm(s)">✏</button>
+                    <button v-if="auth.isAdmin" class="btn btn-ghost btn-sm btn-icon text-slate-500 hover:text-red-600" title="Eliminar" @click="confirmDelete(s)">✕</button>
                   </div>
                 </td>
               </tr>
@@ -206,11 +214,58 @@
     </AppModal>
 
     <ConfirmDialog v-model="showConfirm" message="¿Eliminar esta solicitud?" @confirm="doDelete" />
+
+    <!-- Photo Viewer Modal -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showFotos" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style="background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)"
+             @click.self="showFotos = false">
+          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style="max-height:90vh">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div>
+                <div class="font-semibold text-slate-900 text-sm">Evidencia fotográfica</div>
+                <div class="text-xs text-slate-400 mt-0.5">{{ fotosTarget?.actividad?.substring(0, 50) }}</div>
+              </div>
+              <button class="btn btn-ghost btn-sm btn-icon text-slate-400 hover:text-slate-700" @click="showFotos = false">✕</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+              <label class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-xl p-6 cursor-pointer hover:border-amber-400 hover:bg-amber-50/40 transition-all mb-5"
+                     :class="{ 'opacity-50 pointer-events-none': uploadingFoto }">
+                <CameraIcon class="w-8 h-8 text-slate-300" />
+                <span class="text-sm text-slate-500 font-medium">{{ uploadingFoto ? 'Subiendo foto…' : 'Clic o arrastra una foto aquí' }}</span>
+                <span class="text-xs text-slate-400">JPG, PNG, WebP — máx. 10 MB</span>
+                <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
+                       :disabled="uploadingFoto" @change="handleFotoUpload" />
+              </label>
+              <div v-if="currentFotos.length" class="grid grid-cols-3 gap-3">
+                <div v-for="(foto, i) in currentFotos" :key="i"
+                     class="relative group rounded-xl overflow-hidden bg-slate-100 aspect-[4/3]">
+                  <img :src="foto.url" class="w-full h-full object-cover" />
+                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                    <button v-if="auth.isAdmin"
+                            class="opacity-0 group-hover:opacity-100 transition-all btn btn-danger btn-sm"
+                            @click="deleteFoto(foto.path)">Eliminar</button>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="text-center py-8 text-slate-400 text-sm">
+                Sin fotos adjuntas
+              </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-100 text-xs text-slate-400 text-right">
+              {{ currentFotos.length }} foto{{ currentFotos.length !== 1 ? 's' : '' }}
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { CameraIcon } from '@heroicons/vue/24/outline'
 import { solicitudApi, escenarioApi, tecnicoApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
@@ -239,6 +294,36 @@ const showConfirm = ref(false)
 const editing    = ref<Solicitud | null>(null)
 const toDelete   = ref<Solicitud | null>(null)
 const filters    = reactive({ search: '', prioridad: '', estado: '', tecnico_id: '' })
+
+// ── Photos ─────────────────────────────────────────────────
+const showFotos     = ref(false)
+const fotosTarget   = ref<Solicitud | null>(null)
+const uploadingFoto = ref(false)
+const currentFotos  = computed(() =>
+  (fotosTarget.value?.fotos ?? []).map(p => ({ path: p, url: `/storage/${p}` }))
+)
+function openFotos(s: Solicitud) { fotosTarget.value = s; showFotos.value = true }
+async function handleFotoUpload(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file || !fotosTarget.value) return
+  uploadingFoto.value = true
+  try {
+    const res = await solicitudApi.uploadFoto(fotosTarget.value.id, file)
+    fotosTarget.value.fotos = res.data.fotos.map((f: { path: string }) => f.path)
+    const idx = items.value.findIndex(s => s.id === fotosTarget.value!.id)
+    if (idx !== -1) items.value[idx].fotos = fotosTarget.value.fotos
+  } catch (err) { handleError(err, 'Error al subir la foto') }
+  finally { uploadingFoto.value = false; (e.target as HTMLInputElement).value = '' }
+}
+async function deleteFoto(path: string) {
+  if (!fotosTarget.value) return
+  try {
+    await solicitudApi.removeFoto(fotosTarget.value.id, path)
+    fotosTarget.value.fotos = fotosTarget.value.fotos.filter(f => f !== path)
+    const idx = items.value.findIndex(s => s.id === fotosTarget.value!.id)
+    if (idx !== -1) items.value[idx].fotos = fotosTarget.value.fotos
+  } catch (err) { handleError(err, 'Error al eliminar la foto') }
+}
 
 const emptyForm = (): Partial<Solicitud> => ({
   fecha_solicitud: today(), actividad: '', escenario_id: null, escenario_texto: '',

@@ -188,7 +188,6 @@ const form = ref({
   notas:               '',
 })
 
-// Photos (stored locally, not uploaded — solicitudes don't have storage endpoint yet)
 interface LocalPhoto { file: File; preview: string }
 const fotos = ref<LocalPhoto[]>([])
 function addFoto(e: Event) {
@@ -214,11 +213,14 @@ async function save() {
   try {
     const payload = {
       ...form.value,
-      // prepend tipo to actividad so it's visible in the list
       actividad: `[${tipoSolicitud.value.toUpperCase()}] ${form.value.actividad}`,
     }
-    await solicitudApi.create(payload as never)
-    toast.add('Solicitud enviada correctamente')
+    const res = await solicitudApi.create(payload as never)
+    const sol = res.data as { id: number }
+    for (const f of fotos.value) {
+      await solicitudApi.uploadFoto(sol.id, f.file)
+    }
+    toast.add(`Solicitud enviada — ${fotos.value.length > 0 ? fotos.value.length + ' foto(s) adjunta(s)' : 'sin fotos'}`)
     router.push('/campo')
   } catch (e) {
     handleError(e, 'Error al enviar la solicitud')

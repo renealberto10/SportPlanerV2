@@ -124,6 +124,16 @@ export const solicitudApi = {
   create: (data: SolicitudForm)                          => api.post<Solicitud>('/solicitudes', data),
   update: (id: number, data: Partial<SolicitudForm>)    => api.put<Solicitud>(`/solicitudes/${id}`, data),
   remove: (id: number)                                   => api.delete(`/solicitudes/${id}`),
+  uploadFoto: (id: number, file: File) => {
+    const form = new FormData()
+    form.append('foto', file)
+    return api.post<{ url: string; path: string; fotos: Array<{ path: string; url: string }> }>(
+      `/solicitudes/${id}/fotos`, form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
+  },
+  removeFoto: (id: number, path: string) =>
+    api.delete(`/solicitudes/${id}/fotos`, { data: { path } }),
 }
 
 export const cambioPiezaApi = {
