@@ -1,5 +1,5 @@
 # ── API — Development ──────────────────────────────
-FROM php:8.3-cli-alpine
+FROM php:8.4-cli-alpine
 
 RUN apk add --no-cache \
         git curl zip unzip sqlite-dev libpng-dev libzip-dev \
@@ -15,6 +15,7 @@ EXPOSE 8000
 # Instala deps si no existen y levanta el servidor
 CMD ["sh", "-c", \
     "composer install --no-interaction && \
-     php artisan key:generate --no-interaction 2>/dev/null || true && \
+     [ -f .env ] || cp .env.example .env && \
+     php artisan key:generate --force --no-interaction && \
      php artisan migrate --force && \
      php artisan serve --host=0.0.0.0 --port=8000"]

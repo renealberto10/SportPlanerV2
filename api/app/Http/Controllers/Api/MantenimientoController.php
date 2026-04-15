@@ -42,7 +42,7 @@ class MantenimientoController extends Controller
         $data = $request->validate([
             'escenario_id' => 'required|exists:escenarios,id',
             'fecha' => 'required|date',
-            'hora' => 'nullable|date_format:H:i',
+            'hora' => 'nullable|date_format:H:i,H:i:s',
             'tecnico_id' => 'nullable|exists:tecnicos,id',
             'tecnico' => 'nullable|string|max:255',
             'tipo' => 'required|in:preventivo,correctivo,operativo',
@@ -68,7 +68,7 @@ class MantenimientoController extends Controller
         $data = $request->validate([
             'escenario_id' => 'sometimes|required|exists:escenarios,id',
             'fecha' => 'sometimes|required|date',
-            'hora' => 'nullable|date_format:H:i',
+            'hora' => 'nullable|date_format:H:i,H:i:s',
             'tecnico_id' => 'nullable|exists:tecnicos,id',
             'tecnico' => 'nullable|string|max:255',
             'tipo' => 'sometimes|required|in:preventivo,correctivo,operativo',

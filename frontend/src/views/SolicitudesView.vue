@@ -470,6 +470,8 @@ function openForm(s?: Solicitud) {
 
 function buildPayload() {
   const f = form.value
+  // Strip seconds from hora ("09:00:00" → "09:00") to satisfy date_format:H:i validation
+  const hora = f.hora ? f.hora.substring(0, 5) : null
   return {
     fecha_solicitud:     f.fecha_solicitud,
     actividad:           f.actividad,
@@ -477,7 +479,7 @@ function buildPayload() {
     escenario_texto:     f.escenario_texto || null,
     solicita:            f.solicita,
     fecha_calendarizada: f.fecha_calendarizada || null,
-    hora:                f.hora || null,
+    hora,
     tecnico_id:          f.tecnico_id || null,
     seguimiento:         f.seguimiento || null,
     prioridad:           f.prioridad,
