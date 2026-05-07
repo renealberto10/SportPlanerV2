@@ -99,8 +99,7 @@
          REPORTE DE MANTENIMIENTO (un solo escenario)
          ════════════════════════════════════════════════════════════════════ -->
     <div v-if="reportData && reportData.tipoReporte === 'mantenimiento'" id="reporte-doc">
-      <template v-for="esc in reportData.escenarios" :key="esc.id">
-        <div class="report-page">
+      <div class="report-page" v-for="esc in reportData.escenarios" :key="esc.id">
 
           <!-- HEADER -->
           <div class="r-header">
@@ -130,20 +129,90 @@
             </div>
           </div>
 
+          <!-- ── RESUMEN EJECUTIVO (KPI cards) ─────────────────── -->
+          <div class="r-section">
+            <div class="r-section-title">Resumen Ejecutivo</div>
+            <div class="r-kpi-grid">
+              <div class="r-kpi r-kpi-blue">
+                <div class="r-kpi-num">{{ mantsForEsc(esc.id).length }}</div>
+                <div class="r-kpi-lbl">Visitas realizadas</div>
+              </div>
+              <div class="r-kpi r-kpi-indigo">
+                <div class="r-kpi-num">{{ horasForEsc(esc.id) }}<span class="r-kpi-unit">h</span></div>
+                <div class="r-kpi-lbl">Horas-hombre</div>
+              </div>
+              <div class="r-kpi r-kpi-emerald">
+                <div class="r-kpi-num">{{ tecnicosForEsc(esc.id).length }}</div>
+                <div class="r-kpi-lbl">Técnicos asignados</div>
+              </div>
+              <div class="r-kpi r-kpi-amber">
+                <div class="r-kpi-num">{{ piezasForEsc(esc.id).length }}</div>
+                <div class="r-kpi-lbl">Piezas reemplazadas</div>
+              </div>
+              <div class="r-kpi r-kpi-cyan">
+                <div class="r-kpi-num">{{ equiposForEsc(esc.id).length }}</div>
+                <div class="r-kpi-lbl">Equipos del escenario</div>
+              </div>
+              <div class="r-kpi r-kpi-rose">
+                <div class="r-kpi-num">{{ totalFotosForEsc(esc.id) }}</div>
+                <div class="r-kpi-lbl">Evidencias fotográficas</div>
+              </div>
+            </div>
+
+            <!-- Distribución por tipo -->
+            <div class="r-dist-grid">
+              <div class="r-dist-bar">
+                <div class="r-dist-label">
+                  <span><span class="r-dot" style="background:#3b82f6"></span> Preventivo</span>
+                  <span>{{ countTipo(esc.id, 'preventivo') }}</span>
+                </div>
+                <div class="r-bar-track">
+                  <div class="r-bar-fill" :style="{width: pctTipo(esc.id, 'preventivo'), background:'#3b82f6'}"></div>
+                </div>
+              </div>
+              <div class="r-dist-bar">
+                <div class="r-dist-label">
+                  <span><span class="r-dot" style="background:#ef4444"></span> Correctivo</span>
+                  <span>{{ countTipo(esc.id, 'correctivo') }}</span>
+                </div>
+                <div class="r-bar-track">
+                  <div class="r-bar-fill" :style="{width: pctTipo(esc.id, 'correctivo'), background:'#ef4444'}"></div>
+                </div>
+              </div>
+              <div class="r-dist-bar">
+                <div class="r-dist-label">
+                  <span><span class="r-dot" style="background:#10b981"></span> Operativo</span>
+                  <span>{{ countTipo(esc.id, 'operativo') }}</span>
+                </div>
+                <div class="r-bar-track">
+                  <div class="r-bar-fill" :style="{width: pctTipo(esc.id, 'operativo'), background:'#10b981'}"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- 1. INTRODUCCIÓN -->
           <div class="r-section">
             <div class="r-section-title">1. Introducción</div>
             <p class="r-paragraph">
-              Durante el mes de {{ mesNombre(reportData.mes) }} de {{ reportData.anio }} se realizaron
-              {{ mantsForEsc(esc.id).length }} visita(s) de mantenimiento
+              Durante el mes de <strong>{{ mesNombre(reportData.mes) }} de {{ reportData.anio }}</strong> se realizaron
+              <strong>{{ mantsForEsc(esc.id).length }} visita(s) de mantenimiento</strong>
               {{ tiposRealizados(esc.id) }} en las instalaciones de <strong>{{ esc.nombre }}</strong>,
               a cargo de {{ config.contratista || 'ISATECH, S.A.S. de C.V.' }}.
+              Se acumularon <strong>{{ horasForEsc(esc.id) }} horas-hombre</strong> de trabajo técnico
+              <span v-if="piezasForEsc(esc.id).length">y se reemplazaron <strong>{{ piezasForEsc(esc.id).length }} pieza(s)</strong> con su respectivo registro de número de serie</span>.
             </p>
             <p class="r-paragraph">
               Las actividades desarrolladas estuvieron orientadas a garantizar la seguridad operativa,
               la continuidad del servicio y el correcto funcionamiento de los equipos de audio,
               pantallas digitales y cableado del escenario. Cada intervención cuenta con evidencia
-              fotográfica del estado <em>antes</em> y <em>después</em> del trabajo realizado.
+              fotográfica del estado <em>antes</em> y <em>después</em> del trabajo realizado, sumando un
+              total de <strong>{{ totalFotosForEsc(esc.id) }} evidencias gráficas</strong>
+              ({{ totalFotosTipo(esc.id, 'antes') }} antes / {{ totalFotosTipo(esc.id, 'despues') }} después)
+              que respaldan la trazabilidad y calidad de las labores ejecutadas.
+            </p>
+            <p class="r-paragraph" v-if="esc.descripcion">
+              <strong>Descripción del escenario:</strong> {{ esc.descripcion }}
             </p>
           </div>
 
@@ -163,8 +232,14 @@
               <li v-if="hasType(esc.id,'correctivo')">
                 Soldaduras y cambios en componentes defectuosos (LEDs, tarjetas de señal, fuentes de poder).
               </li>
+              <li v-if="hasType(esc.id,'operativo')">
+                Soporte operativo: movimientos, montaje/desmontaje y configuración de equipos para eventos.
+              </li>
               <li v-if="piezasForEsc(esc.id).length">
-                Reemplazo de {{ piezasForEsc(esc.id).length }} pieza(s) con registro de número de serie.
+                Reemplazo de {{ piezasForEsc(esc.id).length }} pieza(s) con registro de número de serie y entrega a bodega.
+              </li>
+              <li>
+                Documentación fotográfica de cada actividad y elaboración de bitácora técnica.
               </li>
             </ul>
           </div>
@@ -179,35 +254,105 @@
               <li>Pruebas de continuidad y verificación de conexiones.</li>
               <li>Revisión mecánica de tornillería, fijaciones y tensores de estructura.</li>
               <li>Registro fotográfico antes / después y elaboración de bitácora.</li>
+              <li>Validación de funcionamiento al cierre de cada intervención.</li>
             </ul>
           </div>
 
-          <!-- 4. ACTIVIDADES + FOTOS ANTES/DESPUÉS -->
+          <!-- 4. BITÁCORA RESUMIDA -->
           <div class="r-section">
-            <div class="r-section-title">4. Actividades de Mantenimiento</div>
+            <div class="r-section-title">4. Bitácora del Período</div>
+            <table class="r-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Hora</th>
+                  <th>Tipo</th>
+                  <th>Técnico</th>
+                  <th class="text-center">Hrs</th>
+                  <th>Estado</th>
+                  <th class="text-center">Evid.</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="m in mantsForEsc(esc.id)" :key="'b'+m.id">
+                  <td class="font-semibold text-slate-700 whitespace-nowrap">{{ fmtDate(m.fecha) }}</td>
+                  <td class="text-xs text-slate-500">{{ m.hora || '—' }}</td>
+                  <td><span :class="tipoBadge(m.tipo)">{{ MANTENIMIENTO_TIPOS[m.tipo] || m.tipo }}</span></td>
+                  <td class="text-xs">{{ m.tecnico_obj?.nombre_completo || m.tecnico || '—' }}</td>
+                  <td class="text-center font-semibold">{{ m.horas || 0 }}</td>
+                  <td><span :class="estadoBadge(m.estado)">{{ m.estado }}</span></td>
+                  <td class="text-center text-xs">{{ getFotos(m, 'antes').length + getFotos(m, 'despues').length }}</td>
+                </tr>
+                <tr v-if="!mantsForEsc(esc.id).length">
+                  <td colspan="7" class="text-center text-slate-400 italic py-4">Sin visitas registradas en el período.</td>
+                </tr>
+              </tbody>
+              <tfoot v-if="mantsForEsc(esc.id).length">
+                <tr class="r-tfoot">
+                  <td colspan="4" class="text-right font-bold">TOTALES</td>
+                  <td class="text-center font-bold">{{ horasForEsc(esc.id) }}</td>
+                  <td></td>
+                  <td class="text-center font-bold">{{ totalFotosForEsc(esc.id) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- 5. DETALLE DE ACTIVIDADES + FOTOS ANTES/DESPUÉS -->
+          <div class="r-section">
+            <div class="r-section-title">5. Detalle de Actividades con Evidencia Fotográfica</div>
 
             <div v-if="!mantsForEsc(esc.id).length" class="r-paragraph text-slate-500 italic">
               Sin visitas registradas en el período.
             </div>
 
-            <div v-for="m in mantsForEsc(esc.id)" :key="m.id" class="r-mant-card">
+            <div v-for="(m, idx) in mantsForEsc(esc.id)" :key="m.id" class="r-mant-card">
               <div class="r-mant-header">
-                <div class="r-mant-fecha">{{ fmtDate(m.fecha) }}</div>
+                <div class="r-mant-num">#{{ idx + 1 }}</div>
+                <div class="r-mant-fecha">
+                  {{ fmtDate(m.fecha) }}
+                  <span v-if="m.hora" class="text-xs text-slate-500 font-normal ml-1">{{ m.hora }}</span>
+                </div>
                 <span :class="tipoBadge(m.tipo)">{{ MANTENIMIENTO_TIPOS[m.tipo] || m.tipo }}</span>
                 <span :class="estadoBadge(m.estado)">{{ m.estado }}</span>
                 <div class="r-mant-tec">Téc: {{ m.tecnico_obj?.nombre_completo || m.tecnico || '—' }}</div>
                 <div class="r-mant-hrs" v-if="m.horas">{{ m.horas }}h</div>
               </div>
 
+              <!-- Datos de la visita -->
+              <div class="r-meta-row">
+                <div class="r-meta-cell"><span class="r-meta-k">Fecha</span><span class="r-meta-v">{{ fmtDate(m.fecha) }}</span></div>
+                <div class="r-meta-cell" v-if="m.hora"><span class="r-meta-k">Hora</span><span class="r-meta-v">{{ m.hora }}</span></div>
+                <div class="r-meta-cell"><span class="r-meta-k">Tipo</span><span class="r-meta-v capitalize">{{ MANTENIMIENTO_TIPOS[m.tipo] || m.tipo }}</span></div>
+                <div class="r-meta-cell" v-if="m.horas"><span class="r-meta-k">Duración</span><span class="r-meta-v">{{ m.horas }} hrs</span></div>
+                <div class="r-meta-cell" v-if="m.personal"><span class="r-meta-k">Personal</span><span class="r-meta-v">{{ m.personal }}</span></div>
+              </div>
+
               <div class="r-mant-body">
                 <div class="r-mant-col">
-                  <div class="r-mant-label">Actividades realizadas</div>
+                  <div class="r-mant-label">▸ Actividades realizadas</div>
                   <div class="r-mant-text">{{ m.actividades || '—' }}</div>
                 </div>
                 <div class="r-mant-col" v-if="m.observaciones">
-                  <div class="r-mant-label">Observaciones / Resultado</div>
+                  <div class="r-mant-label">▸ Observaciones / Resultado</div>
                   <div class="r-mant-text">{{ m.observaciones }}</div>
                 </div>
+              </div>
+
+              <!-- Piezas reemplazadas en esta visita -->
+              <div v-if="piezasForMant(m.id).length" class="r-mant-piezas">
+                <div class="r-mant-label" style="padding:0.625rem 0.875rem 0.25rem">▸ Piezas reemplazadas en esta visita</div>
+                <table class="r-table r-table-mini">
+                  <thead><tr><th>Pieza</th><th>Tipo</th><th>Serie nueva</th><th>Serie retirada</th></tr></thead>
+                  <tbody>
+                    <tr v-for="p in piezasForMant(m.id)" :key="p.id">
+                      <td>{{ p.descripcion_pieza }}</td>
+                      <td class="capitalize">{{ p.tipo_pieza?.replace('_',' ') }}</td>
+                      <td class="font-mono text-xs">{{ p.serie_instalada || '—' }}</td>
+                      <td class="font-mono text-xs">{{ p.serie_retirada || '—' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
 
               <!-- Fotos ANTES / DESPUÉS -->
@@ -242,36 +387,73 @@
               </div>
               <div v-else class="r-fotos-none">— Sin evidencia fotográfica —</div>
             </div>
-
-            <!-- Piezas reemplazadas -->
-            <template v-if="piezasForEsc(esc.id).length">
-              <div class="r-subsection-title">4.1 Piezas Reemplazadas</div>
-              <table class="r-table">
-                <thead>
-                  <tr>
-                    <th>Pieza</th>
-                    <th>Tipo</th>
-                    <th>Serie instalada</th>
-                    <th>Serie retirada</th>
-                    <th>Técnico</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="p in piezasForEsc(esc.id)" :key="p.id">
-                    <td>{{ p.descripcion_pieza }}</td>
-                    <td class="capitalize">{{ p.tipo_pieza?.replace('_',' ') }}</td>
-                    <td class="font-mono text-xs">{{ p.serie_instalada || '—' }}</td>
-                    <td class="font-mono text-xs">{{ p.serie_retirada || '—' }}</td>
-                    <td>{{ p.tecnico?.nombre_completo || '—' }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </template>
           </div>
 
-          <!-- 5. RESULTADOS -->
+          <!-- 6. PIEZAS REEMPLAZADAS (consolidado) -->
+          <div class="r-section" v-if="piezasForEsc(esc.id).length">
+            <div class="r-section-title">6. Consolidado de Piezas Reemplazadas</div>
+            <table class="r-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Pieza</th>
+                  <th>Tipo</th>
+                  <th>Equipo</th>
+                  <th>Serie instalada</th>
+                  <th>Serie retirada</th>
+                  <th>Bodega</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in piezasForEsc(esc.id)" :key="p.id">
+                  <td class="text-xs whitespace-nowrap">{{ fmtDate(p.fecha) }}</td>
+                  <td>{{ p.descripcion_pieza }}</td>
+                  <td class="capitalize">{{ p.tipo_pieza?.replace('_',' ') }}</td>
+                  <td class="text-xs">{{ p.equipo?.nombre || '—' }}</td>
+                  <td class="font-mono text-xs">{{ p.serie_instalada || '—' }}</td>
+                  <td class="font-mono text-xs">{{ p.serie_retirada || '—' }}</td>
+                  <td>
+                    <span :class="p.estado_bodega === 'recibido' ? 'badge badge-green' : 'badge badge-yellow'">
+                      {{ p.estado_bodega }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 7. INVENTARIO DE EQUIPOS DEL ESCENARIO -->
+          <div class="r-section" v-if="equiposForEsc(esc.id).length">
+            <div class="r-section-title">{{ piezasForEsc(esc.id).length ? '7' : '6' }}. Inventario de Equipos del Escenario</div>
+            <p class="r-paragraph">
+              El escenario cuenta con un total de <strong>{{ equiposForEsc(esc.id).length }} equipos</strong>
+              registrados en inventario, distribuidos como sigue:
+            </p>
+            <table class="r-table">
+              <thead>
+                <tr>
+                  <th>Equipo</th>
+                  <th>Tipo</th>
+                  <th>Modelo</th>
+                  <th>Serie</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="eq in equiposForEsc(esc.id)" :key="eq.id">
+                  <td class="font-medium">{{ eq.nombre }}</td>
+                  <td class="capitalize">{{ eq.tipo }}</td>
+                  <td class="text-xs">{{ eq.modelo || '—' }}</td>
+                  <td class="font-mono text-xs">{{ eq.serie || '—' }}</td>
+                  <td><span :class="equipoEstadoBadge(eq.estado)">{{ eq.estado }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 8. RESULTADOS GLOBALES -->
           <div class="r-section">
-            <div class="r-section-title">5. Resultados Globales</div>
+            <div class="r-section-title">{{ resultsSectionNum(esc.id) }}. Resultados Globales</div>
             <table class="r-table r-table-compact">
               <tbody>
                 <tr>
@@ -280,9 +462,29 @@
                   <td class="r-td-status">Completado</td>
                 </tr>
                 <tr>
-                  <td class="r-td-label">Horas trabajadas</td>
+                  <td class="r-td-label">Mantenimientos preventivos</td>
+                  <td class="font-bold text-center">{{ countTipo(esc.id, 'preventivo') }}</td>
+                  <td class="r-td-status">Registrado</td>
+                </tr>
+                <tr>
+                  <td class="r-td-label">Mantenimientos correctivos</td>
+                  <td class="font-bold text-center">{{ countTipo(esc.id, 'correctivo') }}</td>
+                  <td class="r-td-status">Registrado</td>
+                </tr>
+                <tr>
+                  <td class="r-td-label">Soportes operativos</td>
+                  <td class="font-bold text-center">{{ countTipo(esc.id, 'operativo') }}</td>
+                  <td class="r-td-status">Registrado</td>
+                </tr>
+                <tr>
+                  <td class="r-td-label">Total horas-hombre trabajadas</td>
                   <td class="font-bold text-center">{{ horasForEsc(esc.id) }} hrs</td>
                   <td class="r-td-status">Registrado</td>
+                </tr>
+                <tr>
+                  <td class="r-td-label">Técnicos involucrados</td>
+                  <td class="font-bold text-center">{{ tecnicosForEsc(esc.id).length }}</td>
+                  <td class="r-td-status">Identificado</td>
                 </tr>
                 <tr v-if="piezasForEsc(esc.id).length">
                   <td class="r-td-label">Piezas reemplazadas</td>
@@ -291,19 +493,20 @@
                 </tr>
                 <tr>
                   <td class="r-td-label">Fotos de evidencia (antes / después)</td>
-                  <td class="font-bold text-center">{{ totalFotosForEsc(esc.id) }}</td>
+                  <td class="font-bold text-center">{{ totalFotosTipo(esc.id, 'antes') }} / {{ totalFotosTipo(esc.id, 'despues') }} = {{ totalFotosForEsc(esc.id) }}</td>
                   <td class="r-td-status">Adjuntas</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <!-- 6. ESTADO FINAL -->
+          <!-- 9. ESTADO FINAL -->
           <div class="r-section">
-            <div class="r-section-title">6. Estado Final de los Sistemas</div>
+            <div class="r-section-title">{{ resultsSectionNum(esc.id) + 1 }}. Estado Final de los Sistemas</div>
             <p class="r-paragraph">
               Concluidas las labores del mes de {{ mesNombre(reportData.mes) }} de {{ reportData.anio }},
-              las instalaciones de <strong>{{ esc.nombre }}</strong> quedaron en condiciones operativas y seguras.
+              las instalaciones de <strong>{{ esc.nombre }}</strong> quedaron en condiciones operativas y seguras,
+              cumpliendo con los estándares técnicos definidos en el contrato vigente.
             </p>
             <table class="r-table r-table-compact">
               <thead><tr><th>Sistema</th><th>Estado</th></tr></thead>
@@ -314,6 +517,33 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- 10. CONCLUSIONES Y RECOMENDACIONES -->
+          <div class="r-section">
+            <div class="r-section-title">{{ resultsSectionNum(esc.id) + 2 }}. Conclusiones y Recomendaciones</div>
+            <ul class="r-list">
+              <li>
+                Se cumplió la programación de mantenimiento del período sin incidentes que afectaran
+                la disponibilidad de los sistemas críticos del escenario.
+              </li>
+              <li v-if="hasType(esc.id, 'correctivo')">
+                Se atendieron de forma oportuna las intervenciones correctivas requeridas, restableciendo
+                la operación normal de los equipos afectados.
+              </li>
+              <li v-if="piezasForEsc(esc.id).length">
+                Se documentaron y registraron en bodega las {{ piezasForEsc(esc.id).length }} pieza(s)
+                retirada(s), conservando trazabilidad por número de serie.
+              </li>
+              <li>
+                Se recomienda mantener el calendario preventivo mensual para preservar la vida útil
+                de los equipos y evitar fallas mayores.
+              </li>
+              <li>
+                Se sugiere reforzar la limpieza de filtros y disipadores en pantallas digitales antes
+                del próximo período de alta demanda de eventos.
+              </li>
+            </ul>
           </div>
 
           <!-- FIRMAS -->
@@ -334,7 +564,6 @@
             Generado el {{ new Date().toLocaleDateString('es-SV') }} · SportPlanner · Mantenimiento {{ mesNombre(reportData.mes) }} {{ reportData.anio }}
           </div>
         </div>
-      </template>
 
       <div class="text-center no-print mt-6 pb-6">
         <button class="btn btn-outline" @click="reportData = null">← Volver</button>
@@ -392,8 +621,8 @@
               <tr v-for="esc in escenariosConEventos" :key="esc.id">
                 <td class="font-semibold">{{ esc.nombre }}</td>
                 <td class="text-center font-bold">{{ eventosForEsc(esc.id).length }}</td>
-                <td class="text-center">{{ eventosForEsc(esc.id).filter((e: Evento) => e.estado === 'realizado').length }}</td>
-                <td class="text-center">{{ eventosForEsc(esc.id).filter((e: Evento) => e.estado === 'programado').length }}</td>
+                <td class="text-center">{{ eventosForEsc(esc.id).filter((e) => e.estado === 'realizado').length }}</td>
+                <td class="text-center">{{ eventosForEsc(esc.id).filter((e) => e.estado === 'programado').length }}</td>
                 <td class="text-center">{{ totalFotosEventosForEsc(esc.id) }}</td>
               </tr>
             </tbody>
@@ -405,9 +634,9 @@
       </div>
 
       <!-- Una página por escenario -->
-      <template v-for="esc in escenariosConEventos" :key="'e-'+esc.id">
-        <div class="page-break no-screen"></div>
-        <div class="report-page">
+      <template v-for="esc in escenariosConEventos">
+        <div class="page-break no-screen" :key="'pb-'+esc.id"></div>
+        <div class="report-page" :key="'e-'+esc.id">
           <div class="r-header">
             <div class="r-title-block">
               <div class="r-title">EVENTOS — {{ esc.nombre }}</div>
@@ -465,7 +694,7 @@ import { dashboardApi, escenarioApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useApiError } from '@/composables/useApiError'
 import { MESES, MANTENIMIENTO_TIPOS, fmtDate } from '@/constants'
-import type { Escenario, Mantenimiento, Evento, CambioPieza, MantenimientoFoto, EventoFoto } from '@/types'
+import type { Escenario, Mantenimiento, Evento, CambioPieza, Equipo, MantenimientoFoto, EventoFoto } from '@/types'
 
 const toast = useToastStore()
 const { handleError } = useApiError()
@@ -497,13 +726,39 @@ const eventosForEsc     = (id: number): Evento[] =>
   (reportData.value?.eventos || []).filter((e: Evento) => e.escenario_id === id)
 const piezasForEsc      = (id: number): CambioPieza[] =>
   (reportData.value?.cambios_piezas || []).filter((p: CambioPieza) => p.escenario_id === id)
+const piezasForMant     = (mantId: number): CambioPieza[] =>
+  (reportData.value?.cambios_piezas || []).filter((p: CambioPieza) => p.mantenimiento_id === mantId)
+const equiposForEsc     = (id: number): Equipo[] =>
+  (reportData.value?.equipos || []).filter((e: Equipo) => e.escenario_id === id)
 const hasType           = (id: number, tipo: string) =>
   mantsForEsc(id).some((m: Mantenimiento) => m.tipo === tipo)
 const horasForEsc       = (id: number) =>
   mantsForEsc(id).reduce((s: number, m: Mantenimiento) => s + (m.horas || 0), 0)
+const countTipo         = (id: number, tipo: string) =>
+  mantsForEsc(id).filter((m: Mantenimiento) => m.tipo === tipo).length
+const pctTipo           = (id: number, tipo: string) => {
+  const total = mantsForEsc(id).length
+  if (!total) return '0%'
+  return Math.round((countTipo(id, tipo) / total) * 100) + '%'
+}
+const tecnicosForEsc    = (id: number) => {
+  const set = new Set<string>()
+  mantsForEsc(id).forEach((m: Mantenimiento) => {
+    const name = m.tecnico_obj?.nombre_completo || m.tecnico
+    if (name) set.add(name)
+  })
+  return [...set]
+}
 const tiposRealizados = (id: number) => {
   const tipos = [...new Set(mantsForEsc(id).map((m: Mantenimiento) => MANTENIMIENTO_TIPOS[m.tipo] || m.tipo))]
   return tipos.length ? `(${tipos.join(', ')})` : ''
+}
+const resultsSectionNum = (id: number) => {
+  // Sections 1-5 fixed; 6 piezas (if any), 7 equipos (if any), then resultados.
+  let n = 6
+  if (piezasForEsc(id).length) n++
+  if (equiposForEsc(id).length) n++
+  return n
 }
 
 // ── Foto helpers ──────────────────────────────────────────
@@ -527,6 +782,9 @@ function getEventoFotos(e: Evento): EventoFoto[] {
 
 const totalFotosForEsc = (id: number) =>
   mantsForEsc(id).reduce((s, m) => s + getFotos(m, 'antes').length + getFotos(m, 'despues').length, 0)
+
+const totalFotosTipo = (id: number, tipo: 'antes' | 'despues') =>
+  mantsForEsc(id).reduce((s, m) => s + getFotos(m, tipo).length, 0)
 
 const totalFotosEventosForEsc = (id: number) =>
   eventosForEsc(id).reduce((s, e) => s + getEventoFotos(e).length, 0)
@@ -555,6 +813,13 @@ const eventoEstadoBadge = (estado: string) => ({
   en_curso:   'badge badge-yellow',
   programado: 'badge badge-blue',
   cancelado:  'badge badge-red',
+}[estado] || 'badge badge-gray')
+
+const equipoEstadoBadge = (estado: string) => ({
+  operativo:      'badge badge-green',
+  mantenimiento:  'badge badge-yellow',
+  falla:          'badge badge-red',
+  baja:           'badge badge-gray',
 }[estado] || 'badge badge-gray')
 
 const sistemasEstado = [
@@ -671,6 +936,43 @@ onMounted(async () => {
 .r-list { font-size: 0.8125rem; color: #374151; line-height: 1.7; padding-left: 1.25rem; margin: 0.5rem 0; }
 .r-list li { list-style: disc; margin-bottom: 0.25rem; }
 
+/* ── KPI grid (resumen ejecutivo) ────────────────────────── */
+.r-kpi-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.625rem;
+  margin-bottom: 1rem;
+}
+.r-kpi {
+  border-radius: 0.625rem; padding: 0.75rem 0.875rem;
+  border: 1px solid; display: flex; flex-direction: column; justify-content: center;
+}
+.r-kpi-num { font-size: 1.5rem; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.r-kpi-unit { font-size: 0.875rem; font-weight: 600; margin-left: 0.125rem; opacity: 0.8; }
+.r-kpi-lbl {
+  font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; margin-top: 0.25rem; opacity: 0.85;
+}
+.r-kpi-blue    { background:#eff6ff; border-color:#bfdbfe; color:#1e40af; }
+.r-kpi-indigo  { background:#eef2ff; border-color:#c7d2fe; color:#3730a3; }
+.r-kpi-emerald { background:#ecfdf5; border-color:#a7f3d0; color:#065f46; }
+.r-kpi-amber   { background:#fffbeb; border-color:#fde68a; color:#92400e; }
+.r-kpi-cyan    { background:#ecfeff; border-color:#a5f3fc; color:#155e75; }
+.r-kpi-rose    { background:#fff1f2; border-color:#fecdd3; color:#9f1239; }
+
+/* Distribución por tipo */
+.r-dist-grid {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  display: grid; gap: 0.5rem;
+}
+.r-dist-bar { font-size: 0.75rem; }
+.r-dist-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-weight: 600; color: #374151; margin-bottom: 0.2rem;
+}
+.r-dist-label .r-dot { margin-right: 0.4rem; }
+.r-bar-track { height: 0.4rem; background:#e2e8f0; border-radius:9999px; overflow:hidden; }
+.r-bar-fill  { height:100%; border-radius:9999px; transition: width 0.3s; }
+
 /* ── Mantenimiento card ──────────────────────────────────── */
 .r-mant-card {
   border: 1px solid #e2e8f0; border-radius: 0.625rem;
@@ -682,12 +984,38 @@ onMounted(async () => {
   border-bottom: 1px solid #e2e8f0; flex-wrap: wrap;
 }
 .r-mant-fecha { font-size: 0.8125rem; font-weight: 700; color: #1e3a5f; white-space: nowrap; }
+.r-mant-num   {
+  font-size: 0.6875rem; font-weight: 800; color: white;
+  background: #1e3a5f; padding: 0.125rem 0.5rem; border-radius: 0.4rem;
+  letter-spacing: 0.05em;
+}
 .r-mant-tec   { font-size: 0.75rem; color: #64748b; margin-left: auto; }
 .r-mant-hrs   { font-size: 0.75rem; font-weight: 700; color: #1e3a5f; background: #dbeafe; padding: 0.125rem 0.5rem; border-radius: 9999px; }
 .r-mant-body  { padding: 0.875rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .r-mant-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 0.25rem; }
-.r-mant-text  { font-size: 0.8rem; color: #374151; line-height: 1.6; }
+.r-mant-text  { font-size: 0.8rem; color: #374151; line-height: 1.6; white-space: pre-line; }
 .r-mant-col:only-child { grid-column: 1 / -1; }
+
+/* Meta-row (datos clave de la visita) */
+.r-meta-row {
+  display: flex; flex-wrap: wrap; gap: 0; background: #fafbfc;
+  border-bottom: 1px solid #f1f5f9;
+}
+.r-meta-cell {
+  flex: 1 1 auto; padding: 0.5rem 0.75rem; min-width: 9rem;
+  border-right: 1px solid #f1f5f9; display: flex; flex-direction: column;
+}
+.r-meta-cell:last-child { border-right: none; }
+.r-meta-k { font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
+.r-meta-v { font-size: 0.75rem; color: #1e3a5f; font-weight: 600; margin-top: 0.125rem; }
+
+/* Mini-table embedded in card (piezas por visita) */
+.r-mant-piezas { padding: 0 0.875rem 0.75rem; background: #fafbfc; border-bottom: 1px solid #f1f5f9; }
+.r-table-mini {
+  margin: 0; font-size: 0.7rem;
+}
+.r-table-mini th { background: #475569; padding: 0.3rem 0.5rem; font-size: 0.625rem; }
+.r-table-mini td { padding: 0.3rem 0.5rem; }
 
 /* ── Fotos antes/después ─────────────────────────────────── */
 .r-fotos-pair {
@@ -741,6 +1069,7 @@ onMounted(async () => {
 .r-table tr:last-child td { border-bottom: none; }
 .r-table tr:nth-child(even) td { background: #f8fafc; }
 .r-table-compact td { padding: 0.375rem 0.75rem; }
+.r-tfoot td { background: #f1f5f9 !important; color: #1e3a5f; padding-top: 0.5rem; padding-bottom: 0.5rem; }
 .r-td-label  { color: #374151; font-size: 0.8rem; }
 .r-td-status { font-weight: 600; color: #1e3a5f; text-align: center; }
 

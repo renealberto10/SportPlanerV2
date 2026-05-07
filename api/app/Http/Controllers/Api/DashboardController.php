@@ -101,10 +101,16 @@ class DashboardController extends Controller
                   ->orWhereHas('eventos',      fn($qq) => $qq->whereMonth('fecha', $mes)->whereYear('fecha', $anio));
             })->get();
 
+        // Equipos por escenario (inventario para anexos del reporte)
+        $equiposPorEscenario = Equipo::whereIn('escenario_id', $escenarios->pluck('id'))
+            ->orderBy('escenario_id')->orderBy('tipo')->orderBy('nombre')
+            ->get(['id', 'escenario_id', 'nombre', 'tipo', 'modelo', 'serie', 'estado']);
+
         return response()->json([
             'mes'            => $mes,
             'anio'           => $anio,
             'escenarios'     => $escenarios,
+            'equipos'        => $equiposPorEscenario,
             'mantenimientos' => MantenimientoResource::collection($mants)->resolve(),
             'eventos'        => EventoResource::collection($eventos)->resolve(),
             'cambios_piezas' => $piezas,
