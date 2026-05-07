@@ -8,7 +8,7 @@
       </div>
       <div v-if="reportData" class="flex gap-2">
         <button class="btn btn-outline" @click="reportData = null">✕ Cerrar</button>
-        <button class="btn btn-success" @click="window.print()">Imprimir / PDF</button>
+        <button class="btn btn-success" @click="printDoc">Imprimir / PDF</button>
       </div>
     </div>
 
@@ -538,7 +538,7 @@
 
       <div class="text-center no-print mt-6 pb-6">
         <button class="btn btn-outline" @click="reportData = null">← Volver</button>
-        <button class="btn btn-success ml-2" @click="window.print()">Imprimir / Exportar PDF</button>
+        <button class="btn btn-success ml-2" @click="printDoc">Imprimir / Exportar PDF</button>
       </div>
     </div>
 
@@ -653,7 +653,7 @@
 
       <div class="text-center no-print mt-6 pb-6">
         <button class="btn btn-outline" @click="reportData = null">← Volver</button>
-        <button class="btn btn-success ml-2" @click="window.print()">Imprimir / Exportar PDF</button>
+        <button class="btn btn-success ml-2" @click="printDoc">Imprimir / Exportar PDF</button>
       </div>
     </div>
   </div>
@@ -684,7 +684,7 @@ const filters = reactive({
 const config = reactive({ contratista: 'ISATECH, S.A.S. de C.V.', administrador: 'INDES' })
 
 const mesNombre = (m: number) => MESES[m - 1] || ''
-const window    = globalThis
+const printDoc  = () => globalThis.print()
 
 const canGenerate = computed(() =>
   filters.tipoReporte === 'eventos' || !!filters.escenario_id,
@@ -836,15 +836,69 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ── Print + screen base ─────────────────────────────────── */
-@media print {
-  .no-print    { display: none !important; }
-  .page-break  { page-break-after: always; }
-  #reporte-doc { padding: 0; }
-  .report-page { box-shadow: none !important; border: none !important; padding: 1.5cm 2cm; }
+/* ══ Print rules ══════════════════════════════════════════ */
+@page {
+  size: A4 portrait;
+  margin: 1.2cm 1.4cm;
 }
+
+@media print {
+  /* Force colors/backgrounds */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html, body { background: white !important; margin: 0 !important; padding: 0 !important; }
+
+  .no-print    { display: none !important; }
+  .no-screen   { display: block !important; }
+  .page-break  { page-break-after: always; break-after: page; }
+
+  #reporte-doc { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+
+  .report-page {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    page-break-after: always;
+    break-after: page;
+  }
+  .report-page:last-child { page-break-after: auto; break-after: auto; }
+
+  /* Avoid breaks inside critical blocks */
+  .r-section,
+  .r-mant-card,
+  .r-foto-block,
+  .r-foto-item,
+  .r-kpi,
+  .r-dist-bar,
+  table, tr, .r-table { page-break-inside: avoid; break-inside: avoid; }
+
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+
+  .r-section-title { page-break-after: avoid; break-after: avoid; }
+
+  /* Tighter print typography */
+  body, .report-page { font-size: 10.5pt; line-height: 1.35; }
+  .r-section { margin-bottom: 0.8rem; }
+  .r-paragraph { margin-bottom: 0.4rem; }
+
+  /* Photos: keep crisp + fit */
+  img { max-width: 100% !important; break-inside: avoid; }
+  .r-foto-img, .r-foto img { max-height: 7cm; object-fit: cover; }
+
+  /* Buttons / interactive */
+  button, .btn { display: none !important; }
+}
+
+/* Hide print-only blocks on screen */
 .no-screen { display: none; }
-@media print { .no-screen { display: block; } }
 
 /* ── Report page ─────────────────────────────────────────── */
 .report-page {
