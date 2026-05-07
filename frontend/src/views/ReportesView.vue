@@ -634,9 +634,9 @@
       </div>
 
       <!-- Una página por escenario -->
-      <template v-for="esc in escenariosConEventos">
-        <div class="page-break no-screen" :key="'pb-'+esc.id"></div>
-        <div class="report-page" :key="'e-'+esc.id">
+      <div v-for="esc in escenariosConEventos" :key="'e-'+esc.id">
+        <div class="page-break no-screen"></div>
+        <div class="report-page">
           <div class="r-header">
             <div class="r-title-block">
               <div class="r-title">EVENTOS — {{ esc.nombre }}</div>
@@ -678,7 +678,7 @@
             SportPlanner · Eventos {{ esc.nombre }} · {{ mesNombre(reportData.mes) }} {{ reportData.anio }}
           </div>
         </div>
-      </template>
+      </div>
 
       <div class="text-center no-print mt-6 pb-6">
         <button class="btn btn-outline" @click="reportData = null">← Volver</button>
