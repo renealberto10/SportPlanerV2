@@ -206,37 +206,67 @@
             </div>
 
             <!-- Body -->
-            <div class="flex-1 overflow-y-auto p-6">
-              <!-- Upload zone -->
-              <label class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-xl p-6 cursor-pointer hover:border-blue-400 hover:bg-blue-50/40 transition-all mb-5"
-                     :class="{ 'opacity-50 pointer-events-none': uploadingFoto }">
-                <CameraIcon class="w-8 h-8 text-slate-300" />
-                <span class="text-sm text-slate-500 font-medium">{{ uploadingFoto ? 'Subiendo foto…' : 'Clic o arrastra una foto aquí' }}</span>
-                <span class="text-xs text-slate-400">JPG, PNG, WebP — máx. 10 MB</span>
-                <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
-                       :disabled="uploadingFoto" @change="handleFotoUpload" />
-              </label>
-
-              <!-- Photo grid -->
-              <div v-if="currentFotos.length" class="grid grid-cols-3 gap-3">
-                <div v-for="(foto, i) in currentFotos" :key="i" class="relative group rounded-xl overflow-hidden bg-slate-100 aspect-[4/3]">
-                  <img :src="foto.url" class="w-full h-full object-cover" />
-                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-                    <button v-if="auth.isAdmin" class="opacity-0 group-hover:opacity-100 transition-all btn btn-danger btn-sm"
-                            @click="deleteFoto(foto.path)">
-                      Eliminar
-                    </button>
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+              <!-- ── ANTES ──────────────────────────────── -->
+              <section>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-semibold text-amber-700 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> Antes del trabajo
+                  </h4>
+                  <span class="text-xs text-slate-400">{{ fotosAntes.length }} foto(s)</span>
+                </div>
+                <label class="flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-amber-200 rounded-xl p-4 cursor-pointer hover:border-amber-400 hover:bg-amber-50/40 transition-all mb-3"
+                       :class="{ 'opacity-50 pointer-events-none': uploadingFoto }">
+                  <CameraIcon class="w-6 h-6 text-amber-300" />
+                  <span class="text-xs text-slate-500 font-medium">{{ uploadingFoto && uploadingTipo === 'antes' ? 'Subiendo…' : 'Agregar foto ANTES' }}</span>
+                  <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
+                         :disabled="uploadingFoto" @change="handleFotoUpload($event, 'antes')" />
+                </label>
+                <div v-if="fotosAntes.length" class="grid grid-cols-3 gap-3">
+                  <div v-for="(foto, i) in fotosAntes" :key="'a'+i" class="relative group rounded-xl overflow-hidden bg-slate-100 aspect-[4/3]">
+                    <img :src="foto.url" class="w-full h-full object-cover" />
+                    <div class="absolute top-1 left-1 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">ANTES</div>
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                      <button v-if="auth.isAdmin" class="opacity-0 group-hover:opacity-100 transition-all btn btn-danger btn-sm"
+                              @click="deleteFoto(foto.path)">Eliminar</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div v-else class="text-center py-8 text-slate-400 text-sm">
-                Sin fotos adjuntas — agrega fotos del trabajo realizado
-              </div>
+                <div v-else class="text-center py-3 text-slate-400 text-xs">Sin fotos del estado inicial</div>
+              </section>
+
+              <!-- ── DESPUÉS ────────────────────────────── -->
+              <section>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-sm font-semibold text-emerald-700 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Después del trabajo
+                  </h4>
+                  <span class="text-xs text-slate-400">{{ fotosDespues.length }} foto(s)</span>
+                </div>
+                <label class="flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-emerald-200 rounded-xl p-4 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/40 transition-all mb-3"
+                       :class="{ 'opacity-50 pointer-events-none': uploadingFoto }">
+                  <CameraIcon class="w-6 h-6 text-emerald-300" />
+                  <span class="text-xs text-slate-500 font-medium">{{ uploadingFoto && uploadingTipo === 'despues' ? 'Subiendo…' : 'Agregar foto DESPUÉS' }}</span>
+                  <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
+                         :disabled="uploadingFoto" @change="handleFotoUpload($event, 'despues')" />
+                </label>
+                <div v-if="fotosDespues.length" class="grid grid-cols-3 gap-3">
+                  <div v-for="(foto, i) in fotosDespues" :key="'d'+i" class="relative group rounded-xl overflow-hidden bg-slate-100 aspect-[4/3]">
+                    <img :src="foto.url" class="w-full h-full object-cover" />
+                    <div class="absolute top-1 left-1 bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">DESPUÉS</div>
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                      <button v-if="auth.isAdmin" class="opacity-0 group-hover:opacity-100 transition-all btn btn-danger btn-sm"
+                              @click="deleteFoto(foto.path)">Eliminar</button>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="text-center py-3 text-slate-400 text-xs">Sin fotos del trabajo terminado</div>
+              </section>
             </div>
 
             <!-- Footer -->
             <div class="px-6 py-4 border-t border-slate-100 text-xs text-slate-400 text-right">
-              {{ currentFotos.length }} foto{{ currentFotos.length !== 1 ? 's' : '' }} · estas fotos aparecerán en el informe mensual
+              {{ currentFotos.length }} foto{{ currentFotos.length !== 1 ? 's' : '' }} en total · estas fotos aparecerán en el informe mensual
             </div>
           </div>
         </div>
@@ -257,7 +287,7 @@ import {
   MANTENIMIENTO_ESTADOS, MANTENIMIENTO_ESTADO_BADGE,
   TECNICO_ESPECIALIDADES, avatarColor, fmtDate, today,
 } from '@/constants'
-import type { Mantenimiento, Escenario, Tecnico } from '@/types'
+import type { Mantenimiento, Escenario, Tecnico, MantenimientoFoto } from '@/types'
 import AppModal from '@/components/AppModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
@@ -282,32 +312,44 @@ const filters    = reactive({ search: '', escenario_id: '', tecnico_id: '', tipo
 const showFotos     = ref(false)
 const fotosTarget   = ref<Mantenimiento | null>(null)
 const uploadingFoto = ref(false)
-const currentFotos  = ref<Array<{ path: string; url: string }>>([])
+const uploadingTipo = ref<'antes' | 'despues' | null>(null)
+const currentFotos  = ref<MantenimientoFoto[]>([])
+
+const fotosAntes   = computed(() => currentFotos.value.filter(f => f.tipo === 'antes'))
+const fotosDespues = computed(() => currentFotos.value.filter(f => f.tipo === 'despues'))
 
 function openFotos(m: Mantenimiento) {
-  fotosTarget.value  = m
-  currentFotos.value = (m.fotos || []).map(url => ({
-    url,
-    path: url.replace(/.*\/storage\//, ''),
-  }))
+  fotosTarget.value = m
+  // Soporte para datos legacy (string[]) y nuevo formato (MantenimientoFoto[])
+  currentFotos.value = (m.fotos || []).map((f: any): MantenimientoFoto => {
+    if (typeof f === 'string') {
+      return { url: f, path: f.replace(/.*\/storage\//, ''), tipo: 'despues' }
+    }
+    return {
+      url: f.url,
+      path: f.path,
+      tipo: f.tipo === 'antes' ? 'antes' : 'despues',
+    }
+  })
   showFotos.value = true
 }
 
-async function handleFotoUpload(e: Event) {
+async function handleFotoUpload(e: Event, tipo: 'antes' | 'despues') {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file || !fotosTarget.value) return
   uploadingFoto.value = true
+  uploadingTipo.value = tipo
   try {
-    const { data } = await mantenimientoApi.uploadFoto(fotosTarget.value.id, file)
+    const { data } = await mantenimientoApi.uploadFoto(fotosTarget.value.id, file, tipo)
     currentFotos.value = data.fotos
-    // Update local list so badge count refreshes
     const idx = items.value.findIndex(x => x.id === fotosTarget.value!.id)
-    if (idx !== -1) items.value[idx].fotos = data.fotos.map(f => f.url)
-    toast.add('Foto agregada correctamente')
+    if (idx !== -1) items.value[idx].fotos = data.fotos
+    toast.add(`Foto "${tipo === 'antes' ? 'antes' : 'después'}" agregada`)
   } catch (err) {
     handleError(err, 'Error al subir la foto')
   } finally {
     uploadingFoto.value = false
+    uploadingTipo.value = null
     ;(e.target as HTMLInputElement).value = ''
   }
 }
@@ -315,10 +357,10 @@ async function handleFotoUpload(e: Event) {
 async function deleteFoto(path: string) {
   if (!fotosTarget.value) return
   try {
-    await mantenimientoApi.removeFoto(fotosTarget.value.id, path)
-    currentFotos.value = currentFotos.value.filter(f => f.path !== path)
+    const { data } = await mantenimientoApi.removeFoto(fotosTarget.value.id, path)
+    currentFotos.value = data.fotos
     const idx = items.value.findIndex(x => x.id === fotosTarget.value!.id)
-    if (idx !== -1) items.value[idx].fotos = currentFotos.value.map(f => f.url)
+    if (idx !== -1) items.value[idx].fotos = data.fotos
     toast.add('Foto eliminada')
   } catch (err) {
     handleError(err, 'Error al eliminar la foto')

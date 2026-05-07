@@ -21,7 +21,10 @@ class EventoResource extends JsonResource
             'descripcion' => $this->descripcion,
             'personal' => $this->personal,
             'equipos_notas' => $this->equipos_notas,
-            'fotos' => $this->fotos ?? [],
+            'fotos' => collect($this->fotos ?? [])->map(fn($p) => [
+                'path' => $p,
+                'url'  => asset('storage/' . $p),
+            ])->values(),
             'created_at' => $this->created_at,
         ];
     }

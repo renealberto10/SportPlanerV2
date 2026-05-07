@@ -214,7 +214,7 @@ import { eventoApi, escenarioApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useApiError } from '@/composables/useApiError'
 import { EVENTO_TIPOS, EVENTO_ESTADOS, EVENTO_ESTADO_BADGE, fmtDate, today } from '@/constants'
-import type { Evento, Escenario } from '@/types'
+import type { Evento, Escenario, EventoFoto } from '@/types'
 import AppModal from '@/components/AppModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
@@ -256,9 +256,14 @@ const filteredItems = computed(() => {
   return list
 })
 
-const currentFotos = computed(() =>
-  (fotosEvento.value?.fotos ?? []).map(p => ({ path: p, url: `/storage/${p}` }))
-)
+const currentFotos = computed<EventoFoto[]>(() => {
+  const raw = (fotosEvento.value?.fotos ?? []) as any[]
+  return raw.map(f =>
+    typeof f === 'string'
+      ? { path: f, url: `/storage/${f}` }
+      : { path: f.path, url: f.url },
+  )
+})
 
 function openFotos(e: Evento) { fotosEvento.value = e; showFotos.value = true }
 
@@ -268,7 +273,7 @@ async function handleFotoUpload(e: Event) {
   uploadingFoto.value = true
   try {
     const res = await eventoApi.uploadFoto(fotosEvento.value.id, file)
-    fotosEvento.value.fotos = res.data.fotos.map((f: { path: string }) => f.path)
+    fotosEvento.value.fotos = res.data.fotos as EventoFoto[]
     const idx = items.value.findIndex(ev => ev.id === fotosEvento.value!.id)
     if (idx !== -1) items.value[idx].fotos = fotosEvento.value.fotos
   } catch (err) { handleError(err, 'Error al subir la foto') }
@@ -279,7 +284,9 @@ async function deleteFoto(path: string) {
   if (!fotosEvento.value) return
   try {
     await eventoApi.removeFoto(fotosEvento.value.id, path)
-    fotosEvento.value.fotos = fotosEvento.value.fotos.filter(f => f !== path)
+    fotosEvento.value.fotos = (fotosEvento.value.fotos as any[]).filter((f: any) =>
+      (typeof f === 'string' ? f : f.path) !== path,
+    )
     const idx = items.value.findIndex(ev => ev.id === fotosEvento.value!.id)
     if (idx !== -1) items.value[idx].fotos = fotosEvento.value.fotos
   } catch (err) { handleError(err, 'Error al eliminar la foto') }

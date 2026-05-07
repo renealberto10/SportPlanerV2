@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\EventoResource;
+use App\Http\Resources\MantenimientoResource;
 use App\Models\CambioPieza;
 use App\Models\Escenario;
 use App\Models\Equipo;
@@ -92,25 +94,19 @@ class DashboardController extends Controller
         $eventos = $eventosQuery->orderBy('fecha')->get();
         $piezas  = $piezasQuery->orderBy('fecha')->get();
 
-        // Resolve foto URLs for mantenimientos
-        $mants->each(function ($m) {
-            $m->fotos_urls = collect($m->fotos ?? [])->map(fn($p) => asset('storage/' . $p))->values();
-        });
-
         $escenarios = $escenarioId
             ? Escenario::where('id', $escenarioId)->get()
-            : Escenario::whereHas('mantenimientos', function ($q) use ($mes, $anio) {
-                $q->whereMonth('fecha', $mes)->whereYear('fecha', $anio);
-            })->orWhereHas('eventos', function ($q) use ($mes, $anio) {
-                $q->whereMonth('fecha', $mes)->whereYear('fecha', $anio);
+            : Escenario::where(function ($q) use ($mes, $anio) {
+                $q->whereHas('mantenimientos', fn($qq) => $qq->whereMonth('fecha', $mes)->whereYear('fecha', $anio))
+                  ->orWhereHas('eventos',      fn($qq) => $qq->whereMonth('fecha', $mes)->whereYear('fecha', $anio));
             })->get();
 
         return response()->json([
             'mes'            => $mes,
             'anio'           => $anio,
             'escenarios'     => $escenarios,
-            'mantenimientos' => $mants,
-            'eventos'        => $eventos,
+            'mantenimientos' => MantenimientoResource::collection($mants)->resolve(),
+            'eventos'        => EventoResource::collection($eventos)->resolve(),
             'cambios_piezas' => $piezas,
             'total_horas'    => $mants->sum('horas'),
             'total_preventivos' => $mants->where('tipo', 'preventivo')->count(),

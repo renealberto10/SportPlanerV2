@@ -39,6 +39,19 @@ export interface Tecnico {
   created_at: string
 }
 
+export type MantenimientoFotoTipo = 'antes' | 'despues'
+
+export interface MantenimientoFoto {
+  path: string
+  url: string
+  tipo: MantenimientoFotoTipo
+}
+
+export interface EventoFoto {
+  path: string
+  url: string
+}
+
 export interface Mantenimiento {
   id: number
   escenario_id: number
@@ -54,7 +67,7 @@ export interface Mantenimiento {
   estado: 'pendiente' | 'en_proceso' | 'completado'
   horas: number | null
   personal: string | null
-  fotos: string[]
+  fotos: MantenimientoFoto[]
   created_at: string
 }
 
@@ -70,7 +83,7 @@ export interface Evento {
   descripcion: string | null
   personal: string | null
   equipos_notas: string | null
-  fotos: string[]
+  fotos: EventoFoto[]
   created_at: string
 }
 

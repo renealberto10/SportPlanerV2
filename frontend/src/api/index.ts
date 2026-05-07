@@ -79,15 +79,18 @@ export const mantenimientoApi = {
   create: (data: MantenimientoForm)                          => api.post<Mantenimiento>('/mantenimientos', data),
   update: (id: number, data: Partial<MantenimientoForm>)    => api.put<Mantenimiento>(`/mantenimientos/${id}`, data),
   remove: (id: number)                                       => api.delete(`/mantenimientos/${id}`),
-  uploadFoto: (id: number, file: File) => {
+  uploadFoto: (id: number, file: File, tipo: 'antes' | 'despues' = 'despues') => {
     const form = new FormData()
     form.append('foto', file)
-    return api.post<{ url: string; path: string; fotos: Array<{ path: string; url: string }> }>(
+    form.append('tipo', tipo)
+    return api.post<{ url: string; path: string; tipo: 'antes' | 'despues'; fotos: Array<{ path: string; url: string; tipo: 'antes' | 'despues' }> }>(
       `/mantenimientos/${id}/fotos`, form,
     )
   },
   removeFoto: (id: number, path: string) =>
-    api.delete(`/mantenimientos/${id}/fotos`, { data: { path } }),
+    api.delete<{ message: string; fotos: Array<{ path: string; url: string; tipo: 'antes' | 'despues' }> }>(
+      `/mantenimientos/${id}/fotos`, { data: { path } },
+    ),
 }
 
 export const eventoApi = {

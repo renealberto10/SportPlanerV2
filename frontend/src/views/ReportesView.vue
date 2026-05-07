@@ -4,7 +4,7 @@
     <div class="page-header no-print">
       <div>
         <h2 class="page-title">Generador de Reportes</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Informe técnico de mantenimiento por escenario</p>
+        <p class="text-xs text-slate-500 mt-0.5">Informes técnicos con evidencia fotográfica</p>
       </div>
       <div v-if="reportData" class="flex gap-2">
         <button class="btn btn-outline" @click="reportData = null">✕ Cerrar</button>
@@ -15,6 +15,42 @@
     <!-- ── Filter panel ─────────────────────────────────── -->
     <div v-if="!reportData" class="card mb-6 no-print">
       <h3 class="font-semibold text-slate-800 text-sm mb-4">Configurar Reporte</h3>
+
+      <!-- Tipo de reporte -->
+      <div class="mb-5">
+        <label class="label">Tipo de Reporte *</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button type="button"
+                  class="text-left rounded-xl border-2 p-4 transition-all"
+                  :class="filters.tipoReporte === 'mantenimiento'
+                    ? 'border-blue-500 bg-blue-50/50 ring-2 ring-blue-100'
+                    : 'border-slate-200 hover:border-slate-300'"
+                  @click="filters.tipoReporte = 'mantenimiento'">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+              <div class="font-semibold text-sm text-slate-800">Reporte de Mantenimiento</div>
+            </div>
+            <div class="text-xs text-slate-500 leading-relaxed">
+              Informe técnico detallado de un solo escenario, con fotos antes y después del trabajo.
+            </div>
+          </button>
+          <button type="button"
+                  class="text-left rounded-xl border-2 p-4 transition-all"
+                  :class="filters.tipoReporte === 'eventos'
+                    ? 'border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-100'
+                    : 'border-slate-200 hover:border-slate-300'"
+                  @click="filters.tipoReporte = 'eventos'">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <div class="font-semibold text-sm text-slate-800">Reporte de Eventos</div>
+            </div>
+            <div class="text-xs text-slate-500 leading-relaxed">
+              Resumen de eventos del periodo, todos los escenarios en un solo documento, separados por escenario.
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div>
           <label class="label">Mes</label>
@@ -30,11 +66,18 @@
           </select>
         </div>
         <div class="md:col-span-2">
-          <label class="label">Escenario</label>
+          <label class="label">
+            Escenario
+            <span v-if="filters.tipoReporte === 'mantenimiento'" class="text-red-500">*</span>
+          </label>
           <select v-model="filters.escenario_id" class="input">
-            <option value="">Todos los escenarios</option>
+            <option v-if="filters.tipoReporte === 'eventos'" value="">Todos los escenarios</option>
+            <option v-else value="" disabled>Seleccionar escenario…</option>
             <option v-for="e in escenarios" :key="e.id" :value="e.id">{{ e.nombre }}</option>
           </select>
+          <p v-if="filters.tipoReporte === 'mantenimiento'" class="text-xs text-amber-600 mt-1.5">
+            ⚠ El reporte de mantenimiento sólo se genera para un escenario a la vez.
+          </p>
         </div>
       </div>
       <div class="grid grid-cols-2 gap-4 mb-5">
@@ -47,19 +90,19 @@
           <input v-model="config.administrador" class="input" placeholder="INDES" />
         </div>
       </div>
-      <button class="btn btn-primary" :disabled="loading" @click="generar">
+      <button class="btn btn-primary" :disabled="loading || !canGenerate" @click="generar">
         {{ loading ? 'Generando…' : '↗ Generar Reporte' }}
       </button>
     </div>
 
-    <!-- ── REPORT ────────────────────────────────────────── -->
-    <div v-if="reportData" id="reporte-doc">
+    <!-- ════════════════════════════════════════════════════════════════════
+         REPORTE DE MANTENIMIENTO (un solo escenario)
+         ════════════════════════════════════════════════════════════════════ -->
+    <div v-if="reportData && reportData.tipoReporte === 'mantenimiento'" id="reporte-doc">
       <template v-for="esc in reportData.escenarios" :key="esc.id">
-
-        <!-- ════ PAGE PER ESCENARIO ════ -->
         <div class="report-page">
 
-          <!-- ┌─ PORTADA / HEADER ────────────────────────────┐ -->
+          <!-- HEADER -->
           <div class="r-header">
             <div class="r-header-top">
               <div class="r-logo-box">
@@ -87,7 +130,7 @@
             </div>
           </div>
 
-          <!-- ┌─ 1. INTRODUCCIÓN ─────────────────────────────┐ -->
+          <!-- 1. INTRODUCCIÓN -->
           <div class="r-section">
             <div class="r-section-title">1. Introducción</div>
             <p class="r-paragraph">
@@ -99,17 +142,14 @@
             <p class="r-paragraph">
               Las actividades desarrolladas estuvieron orientadas a garantizar la seguridad operativa,
               la continuidad del servicio y el correcto funcionamiento de los equipos de audio,
-              pantallas digitales y cableado del escenario.
-              {{ eventosForEsc(esc.id).length > 0
-                ? `Adicionalmente, se brindó soporte técnico en ${eventosForEsc(esc.id).length} evento(s) realizado(s) durante el período.`
-                : '' }}
+              pantallas digitales y cableado del escenario. Cada intervención cuenta con evidencia
+              fotográfica del estado <em>antes</em> y <em>después</em> del trabajo realizado.
             </p>
           </div>
 
-          <!-- ┌─ 2. ALCANCE DEL TRABAJO ──────────────────────┐ -->
+          <!-- 2. ALCANCE -->
           <div class="r-section">
             <div class="r-section-title">2. Alcance del Trabajo</div>
-            <p class="r-paragraph">Las intervenciones realizadas comprendieron las siguientes acciones:</p>
             <ul class="r-list">
               <li v-if="hasType(esc.id,'preventivo') || hasType(esc.id,'correctivo')">
                 Limpieza y revisión de bocinas, rejillas protectoras y conectores de audio.
@@ -123,96 +163,89 @@
               <li v-if="hasType(esc.id,'correctivo')">
                 Soldaduras y cambios en componentes defectuosos (LEDs, tarjetas de señal, fuentes de poder).
               </li>
-              <li v-if="hasType(esc.id,'operativo') || eventosForEsc(esc.id).length">
-                Producción técnica para eventos deportivos: operación de pantallas, audio y sistemas de control.
-              </li>
               <li v-if="piezasForEsc(esc.id).length">
                 Reemplazo de {{ piezasForEsc(esc.id).length }} pieza(s) con registro de número de serie.
               </li>
             </ul>
           </div>
 
-          <!-- ┌─ 3. METODOLOGÍA ──────────────────────────────┐ -->
+          <!-- 3. METODOLOGÍA -->
           <div class="r-section">
             <div class="r-section-title">3. Metodología de Trabajo</div>
-            <p class="r-paragraph">Las tareas se desarrollaron aplicando procedimientos técnicos orientados a garantizar la seguridad y confiabilidad del sistema:</p>
             <ul class="r-list">
               <li>Desenergización de circuitos antes de cada intervención.</li>
               <li>Uso de equipo de protección personal (EPP) por parte del personal técnico.</li>
               <li>Limpieza técnica mediante aire comprimido, brocha antiestática y limpiador dieléctrico.</li>
               <li>Pruebas de continuidad y verificación de conexiones.</li>
               <li>Revisión mecánica de tornillería, fijaciones y tensores de estructura.</li>
-              <li>Registro técnico de actividades y evidencias fotográficas.</li>
+              <li>Registro fotográfico antes / después y elaboración de bitácora.</li>
             </ul>
           </div>
 
-          <!-- ┌─ 4. ACTIVIDADES ──────────────────────────────┐ -->
+          <!-- 4. ACTIVIDADES + FOTOS ANTES/DESPUÉS -->
           <div class="r-section">
             <div class="r-section-title">4. Actividades de Mantenimiento</div>
 
-            <!-- 4.1 Mantenimientos -->
-            <div v-if="mantsForEsc(esc.id).length">
-              <div class="r-subsection-title">4.1 Mantenimiento Preventivo y Correctivo</div>
-              <div v-for="m in mantsForEsc(esc.id)" :key="m.id" class="r-mant-card">
-                <div class="r-mant-header">
-                  <div class="r-mant-fecha">{{ fmtDate(m.fecha) }}</div>
-                  <span :class="tipoBadge(m.tipo)">{{ MANTENIMIENTO_TIPOS[m.tipo] || m.tipo }}</span>
-                  <span :class="estadoBadge(m.estado)">{{ m.estado }}</span>
-                  <div class="r-mant-tec">Téc: {{ m.tecnico_obj?.nombre_completo || m.tecnico || '—' }}</div>
-                  <div class="r-mant-hrs" v-if="m.horas">{{ m.horas }}h</div>
-                </div>
-
-                <div class="r-mant-body">
-                  <div class="r-mant-col">
-                    <div class="r-mant-label">Actividades realizadas</div>
-                    <div class="r-mant-text">{{ m.actividades || '—' }}</div>
-                  </div>
-                  <div class="r-mant-col" v-if="m.observaciones">
-                    <div class="r-mant-label">Observaciones / Resultado</div>
-                    <div class="r-mant-text">{{ m.observaciones }}</div>
-                  </div>
-                </div>
-
-                <!-- Fotos del mantenimiento -->
-                <div v-if="m.fotos_urls?.length" class="r-fotos-grid">
-                  <div v-for="(url, fi) in m.fotos_urls" :key="fi" class="r-foto-item">
-                    <img :src="url" class="r-foto-img" />
-                  </div>
-                </div>
-              </div>
+            <div v-if="!mantsForEsc(esc.id).length" class="r-paragraph text-slate-500 italic">
+              Sin visitas registradas en el período.
             </div>
 
-            <!-- 4.2 Eventos / Producción Técnica -->
-            <div v-if="eventosForEsc(esc.id).length">
-              <div class="r-subsection-title">4.2 Producción Técnica para Eventos</div>
-              <table class="r-table">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Evento</th>
-                    <th>Tipo</th>
-                    <th>Personal técnico</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="e in eventosForEsc(esc.id)" :key="e.id">
-                    <td class="whitespace-nowrap">{{ fmtDate(e.fecha) }}</td>
-                    <td class="font-semibold">{{ e.nombre }}</td>
-                    <td class="capitalize">{{ e.tipo }}</td>
-                    <td>{{ e.personal || '—' }}</td>
-                    <td class="capitalize">{{ e.estado }}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <div v-if="equiposNotasForEsc(esc.id)" class="r-paragraph mt-2 text-xs text-slate-500">
-                <strong>Equipos utilizados:</strong> {{ equiposNotasForEsc(esc.id) }}
+            <div v-for="m in mantsForEsc(esc.id)" :key="m.id" class="r-mant-card">
+              <div class="r-mant-header">
+                <div class="r-mant-fecha">{{ fmtDate(m.fecha) }}</div>
+                <span :class="tipoBadge(m.tipo)">{{ MANTENIMIENTO_TIPOS[m.tipo] || m.tipo }}</span>
+                <span :class="estadoBadge(m.estado)">{{ m.estado }}</span>
+                <div class="r-mant-tec">Téc: {{ m.tecnico_obj?.nombre_completo || m.tecnico || '—' }}</div>
+                <div class="r-mant-hrs" v-if="m.horas">{{ m.horas }}h</div>
               </div>
+
+              <div class="r-mant-body">
+                <div class="r-mant-col">
+                  <div class="r-mant-label">Actividades realizadas</div>
+                  <div class="r-mant-text">{{ m.actividades || '—' }}</div>
+                </div>
+                <div class="r-mant-col" v-if="m.observaciones">
+                  <div class="r-mant-label">Observaciones / Resultado</div>
+                  <div class="r-mant-text">{{ m.observaciones }}</div>
+                </div>
+              </div>
+
+              <!-- Fotos ANTES / DESPUÉS -->
+              <div v-if="getFotos(m, 'antes').length || getFotos(m, 'despues').length" class="r-fotos-pair">
+
+                <div class="r-fotos-side r-fotos-antes">
+                  <div class="r-fotos-side-title">
+                    <span class="r-dot r-dot-antes"></span> ANTES
+                    <span class="r-fotos-count">{{ getFotos(m, 'antes').length }}</span>
+                  </div>
+                  <div v-if="getFotos(m, 'antes').length" class="r-fotos-grid-2">
+                    <div v-for="(f, i) in getFotos(m, 'antes')" :key="'a'+i" class="r-foto-item">
+                      <img :src="f.url" class="r-foto-img" />
+                    </div>
+                  </div>
+                  <div v-else class="r-fotos-empty">Sin foto del estado inicial</div>
+                </div>
+
+                <div class="r-fotos-side r-fotos-despues">
+                  <div class="r-fotos-side-title">
+                    <span class="r-dot r-dot-despues"></span> DESPUÉS
+                    <span class="r-fotos-count">{{ getFotos(m, 'despues').length }}</span>
+                  </div>
+                  <div v-if="getFotos(m, 'despues').length" class="r-fotos-grid-2">
+                    <div v-for="(f, i) in getFotos(m, 'despues')" :key="'d'+i" class="r-foto-item">
+                      <img :src="f.url" class="r-foto-img" />
+                    </div>
+                  </div>
+                  <div v-else class="r-fotos-empty">Sin foto del trabajo terminado</div>
+                </div>
+
+              </div>
+              <div v-else class="r-fotos-none">— Sin evidencia fotográfica —</div>
             </div>
 
-            <!-- 4.3 Piezas reemplazadas -->
-            <div v-if="piezasForEsc(esc.id).length">
-              <div class="r-subsection-title">4.3 Piezas Reemplazadas</div>
+            <!-- Piezas reemplazadas -->
+            <template v-if="piezasForEsc(esc.id).length">
+              <div class="r-subsection-title">4.1 Piezas Reemplazadas</div>
               <table class="r-table">
                 <thead>
                   <tr>
@@ -221,7 +254,6 @@
                     <th>Serie instalada</th>
                     <th>Serie retirada</th>
                     <th>Técnico</th>
-                    <th>Bodega</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -231,19 +263,16 @@
                     <td class="font-mono text-xs">{{ p.serie_instalada || '—' }}</td>
                     <td class="font-mono text-xs">{{ p.serie_retirada || '—' }}</td>
                     <td>{{ p.tecnico?.nombre_completo || '—' }}</td>
-                    <td class="capitalize">{{ p.estado_bodega }}</td>
                   </tr>
                 </tbody>
               </table>
-            </div>
+            </template>
           </div>
 
-          <!-- ┌─ 5. RESULTADOS Y HALLAZGOS ───────────────────┐ -->
+          <!-- 5. RESULTADOS -->
           <div class="r-section">
-            <div class="r-section-title">5. Resultados y Hallazgos</div>
-
-            <div class="r-subsection-title">5.1 Resultados Globales</div>
-            <table class="r-table r-table-compact mb-4">
+            <div class="r-section-title">5. Resultados Globales</div>
+            <table class="r-table r-table-compact">
               <tbody>
                 <tr>
                   <td class="r-td-label">Visitas de mantenimiento realizadas</td>
@@ -255,83 +284,25 @@
                   <td class="font-bold text-center">{{ horasForEsc(esc.id) }} hrs</td>
                   <td class="r-td-status">Registrado</td>
                 </tr>
-                <tr>
-                  <td class="r-td-label">Eventos con soporte técnico</td>
-                  <td class="font-bold text-center">{{ eventosForEsc(esc.id).length }}</td>
-                  <td class="r-td-status">{{ eventosForEsc(esc.id).length > 0 ? 'Atendido' : '—' }}</td>
-                </tr>
                 <tr v-if="piezasForEsc(esc.id).length">
                   <td class="r-td-label">Piezas reemplazadas</td>
                   <td class="font-bold text-center">{{ piezasForEsc(esc.id).length }}</td>
                   <td class="r-td-status">Registrado</td>
                 </tr>
                 <tr>
-                  <td class="r-td-label">Sistema de Audio y Bocinas</td>
-                  <td class="font-bold text-center">—</td>
-                  <td class="r-td-status ok">Operativo</td>
-                </tr>
-                <tr>
-                  <td class="r-td-label">Pantallas Digitales</td>
-                  <td class="font-bold text-center">—</td>
-                  <td class="r-td-status ok">Operativo</td>
-                </tr>
-                <tr>
-                  <td class="r-td-label">Cableado Eléctrico y de Señal</td>
-                  <td class="font-bold text-center">—</td>
-                  <td class="r-td-status">Verificado</td>
+                  <td class="r-td-label">Fotos de evidencia (antes / después)</td>
+                  <td class="font-bold text-center">{{ totalFotosForEsc(esc.id) }}</td>
+                  <td class="r-td-status">Adjuntas</td>
                 </tr>
               </tbody>
             </table>
-
-            <!-- 5.2 Hallazgos (correctivos) -->
-            <div v-if="correctivosForEsc(esc.id).length">
-              <div class="r-subsection-title">5.2 Hallazgos Atendidos</div>
-              <table class="r-table">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Hallazgo / Actividad correctiva</th>
-                    <th>Resultado</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="m in correctivosForEsc(esc.id)" :key="m.id">
-                    <td class="whitespace-nowrap">{{ fmtDate(m.fecha) }}</td>
-                    <td>{{ m.actividades || '—' }}</td>
-                    <td>{{ m.observaciones || 'Resuelto' }}</td>
-                    <td class="capitalize font-medium" :class="m.estado === 'completado' ? 'text-emerald-700' : 'text-amber-700'">
-                      {{ m.estado === 'completado' ? 'Resuelto' : m.estado }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
           </div>
 
-          <!-- ┌─ 6. BITÁCORA TÉCNICA ─────────────────────────┐ -->
+          <!-- 6. ESTADO FINAL -->
           <div class="r-section">
-            <div class="r-section-title">6. Bitácora Técnica (Resumen de Jornada)</div>
-            <ol class="r-ordered-list">
-              <li>Inspección inicial del estado general del escenario.</li>
-              <li>Desenergización controlada de circuitos a intervenir.</li>
-              <li v-for="m in mantsForEsc(esc.id)" :key="'b'+m.id">
-                <span class="font-medium">{{ fmtDate(m.fecha) }}:</span> {{ m.actividades }}
-              </li>
-              <li v-if="eventosForEsc(esc.id).length">
-                Soporte técnico en {{ eventosForEsc(esc.id).length }} evento(s):
-                {{ eventosForEsc(esc.id).map((e:any) => e.nombre).join(', ') }}.
-              </li>
-              <li>Registro fotográfico de actividades realizadas.</li>
-              <li>Elaboración del reporte técnico y cierre de labores.</li>
-            </ol>
-          </div>
-
-          <!-- ┌─ 7. ESTADO FINAL ─────────────────────────────┐ -->
-          <div class="r-section">
-            <div class="r-section-title">7. Estado Final de los Sistemas</div>
+            <div class="r-section-title">6. Estado Final de los Sistemas</div>
             <p class="r-paragraph">
-              Concluidas las labores de mantenimiento del mes de {{ mesNombre(reportData.mes) }} de {{ reportData.anio }},
+              Concluidas las labores del mes de {{ mesNombre(reportData.mes) }} de {{ reportData.anio }},
               las instalaciones de <strong>{{ esc.nombre }}</strong> quedaron en condiciones operativas y seguras.
             </p>
             <table class="r-table r-table-compact">
@@ -343,12 +314,9 @@
                 </tr>
               </tbody>
             </table>
-            <p class="r-paragraph mt-3 text-slate-500 text-xs">
-              Se recomienda continuar con el programa de mantenimiento preventivo para preservar el buen estado de los equipos.
-            </p>
           </div>
 
-          <!-- ┌─ FIRMAS ──────────────────────────────────────┐ -->
+          <!-- FIRMAS -->
           <div class="r-section r-signatures">
             <div class="r-sig-col">
               <div class="r-sig-line"></div>
@@ -363,17 +331,126 @@
           </div>
 
           <div class="r-footer">
-            Generado el {{ new Date().toLocaleDateString('es-SV') }} · SportPlanner · {{ mesNombre(reportData.mes) }} {{ reportData.anio }}
+            Generado el {{ new Date().toLocaleDateString('es-SV') }} · SportPlanner · Mantenimiento {{ mesNombre(reportData.mes) }} {{ reportData.anio }}
+          </div>
+        </div>
+      </template>
+
+      <div class="text-center no-print mt-6 pb-6">
+        <button class="btn btn-outline" @click="reportData = null">← Volver</button>
+        <button class="btn btn-success ml-2" @click="window.print()">Imprimir / Exportar PDF</button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         REPORTE DE EVENTOS (todos los escenarios, separados)
+         ════════════════════════════════════════════════════════════════════ -->
+    <div v-if="reportData && reportData.tipoReporte === 'eventos'" id="reporte-doc">
+
+      <!-- Portada general -->
+      <div class="report-page">
+        <div class="r-header">
+          <div class="r-header-top">
+            <div class="r-logo-box">
+              <div class="r-logo-mark">SP</div>
+              <div>
+                <div class="r-logo-name">SportPlanner</div>
+                <div class="r-logo-sub">{{ config.contratista || 'ISATECH, S.A.S. de C.V.' }}</div>
+              </div>
+            </div>
+            <div class="r-header-meta">
+              <div><span class="r-meta-label">Mes:</span> {{ mesNombre(reportData.mes) }} {{ reportData.anio }}</div>
+              <div v-if="config.administrador"><span class="r-meta-label">Cliente:</span> {{ config.administrador }}</div>
+            </div>
+          </div>
+          <div class="r-title-block">
+            <div class="r-title">REPORTE DE EVENTOS Y PRODUCCIÓN TÉCNICA</div>
+            <div class="r-subtitle">Resumen del Periodo</div>
+            <div class="r-period">{{ mesNombre(reportData.mes) }} de {{ reportData.anio }}</div>
+          </div>
+          <div class="r-header-fields">
+            <div class="r-field"><span class="r-field-label">Escenarios incluidos:</span> {{ escenariosConEventos.length }}</div>
+            <div class="r-field"><span class="r-field-label">Total de eventos:</span> {{ reportData.eventos.length }}</div>
+            <div class="r-field"><span class="r-field-label">Contratista:</span> {{ config.contratista || 'ISATECH, S.A.S. de C.V.' }}</div>
+            <div class="r-field" v-if="config.administrador"><span class="r-field-label">Administrado por:</span> {{ config.administrador }}</div>
+          </div>
+        </div>
+
+        <div class="r-section">
+          <div class="r-section-title">Resumen General del Periodo</div>
+          <table class="r-table">
+            <thead>
+              <tr>
+                <th>Escenario</th>
+                <th class="text-center">Eventos</th>
+                <th class="text-center">Realizados</th>
+                <th class="text-center">Programados</th>
+                <th class="text-center">Fotos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="esc in escenariosConEventos" :key="esc.id">
+                <td class="font-semibold">{{ esc.nombre }}</td>
+                <td class="text-center font-bold">{{ eventosForEsc(esc.id).length }}</td>
+                <td class="text-center">{{ eventosForEsc(esc.id).filter((e: Evento) => e.estado === 'realizado').length }}</td>
+                <td class="text-center">{{ eventosForEsc(esc.id).filter((e: Evento) => e.estado === 'programado').length }}</td>
+                <td class="text-center">{{ totalFotosEventosForEsc(esc.id) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="!escenariosConEventos.length" class="r-paragraph text-slate-500 italic mt-3">
+            No hay eventos registrados en el período seleccionado.
+          </div>
+        </div>
+      </div>
+
+      <!-- Una página por escenario -->
+      <template v-for="esc in escenariosConEventos" :key="'e-'+esc.id">
+        <div class="page-break no-screen"></div>
+        <div class="report-page">
+          <div class="r-header">
+            <div class="r-title-block">
+              <div class="r-title">EVENTOS — {{ esc.nombre }}</div>
+              <div class="r-period">{{ mesNombre(reportData.mes) }} de {{ reportData.anio }}</div>
+            </div>
           </div>
 
-        </div><!-- /report-page -->
+          <div v-for="ev in eventosForEsc(esc.id)" :key="ev.id" class="r-mant-card">
+            <div class="r-mant-header">
+              <div class="r-mant-fecha">{{ fmtDate(ev.fecha) }}<span v-if="ev.hora" class="text-slate-400 font-normal ml-1">{{ ev.hora }}</span></div>
+              <span class="badge badge-blue capitalize">{{ ev.tipo }}</span>
+              <span :class="eventoEstadoBadge(ev.estado)">{{ ev.estado }}</span>
+              <div class="r-mant-tec">{{ ev.nombre }}</div>
+            </div>
 
-        <!-- page break between escenarios (for print) -->
-        <div class="page-break no-screen"></div>
+            <div class="r-mant-body">
+              <div class="r-mant-col" v-if="ev.descripcion">
+                <div class="r-mant-label">Descripción</div>
+                <div class="r-mant-text">{{ ev.descripcion }}</div>
+              </div>
+              <div class="r-mant-col" v-if="ev.personal">
+                <div class="r-mant-label">Personal técnico</div>
+                <div class="r-mant-text">{{ ev.personal }}</div>
+              </div>
+              <div class="r-mant-col" v-if="ev.equipos_notas" style="grid-column: 1 / -1">
+                <div class="r-mant-label">Equipos / Notas técnicas</div>
+                <div class="r-mant-text">{{ ev.equipos_notas }}</div>
+              </div>
+            </div>
 
-      </template><!-- /escenarios loop -->
+            <div v-if="getEventoFotos(ev).length" class="r-fotos-grid">
+              <div v-for="(f, i) in getEventoFotos(ev)" :key="i" class="r-foto-item">
+                <img :src="f.url" class="r-foto-img" />
+              </div>
+            </div>
+          </div>
 
-      <!-- Back button -->
+          <div class="r-footer">
+            SportPlanner · Eventos {{ esc.nombre }} · {{ mesNombre(reportData.mes) }} {{ reportData.anio }}
+          </div>
+        </div>
+      </template>
+
       <div class="text-center no-print mt-6 pb-6">
         <button class="btn btn-outline" @click="reportData = null">← Volver</button>
         <button class="btn btn-success ml-2" @click="window.print()">Imprimir / Exportar PDF</button>
@@ -383,12 +460,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { dashboardApi, escenarioApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useApiError } from '@/composables/useApiError'
 import { MESES, MANTENIMIENTO_TIPOS, fmtDate } from '@/constants'
-import type { Escenario, Mantenimiento, Evento, CambioPieza } from '@/types'
+import type { Escenario, Mantenimiento, Evento, CambioPieza, MantenimientoFoto, EventoFoto } from '@/types'
 
 const toast = useToastStore()
 const { handleError } = useApiError()
@@ -398,11 +475,20 @@ const escenarios = ref<Escenario[]>([])
 const reportData = ref<any>(null)
 const now        = new Date()
 
-const filters = reactive({ mes: now.getMonth() + 1, anio: now.getFullYear(), escenario_id: '' })
-const config  = reactive({ contratista: 'ISATECH, S.A.S. de C.V.', administrador: 'INDES' })
+const filters = reactive({
+  tipoReporte: 'mantenimiento' as 'mantenimiento' | 'eventos',
+  mes: now.getMonth() + 1,
+  anio: now.getFullYear(),
+  escenario_id: '' as number | '',
+})
+const config = reactive({ contratista: 'ISATECH, S.A.S. de C.V.', administrador: 'INDES' })
 
 const mesNombre = (m: number) => MESES[m - 1] || ''
 const window    = globalThis
+
+const canGenerate = computed(() =>
+  filters.tipoReporte === 'eventos' || !!filters.escenario_id,
+)
 
 // ── Per-escenario filters ─────────────────────────────────
 const mantsForEsc       = (id: number): Mantenimiento[] =>
@@ -411,20 +497,45 @@ const eventosForEsc     = (id: number): Evento[] =>
   (reportData.value?.eventos || []).filter((e: Evento) => e.escenario_id === id)
 const piezasForEsc      = (id: number): CambioPieza[] =>
   (reportData.value?.cambios_piezas || []).filter((p: CambioPieza) => p.escenario_id === id)
-const correctivosForEsc = (id: number) =>
-  mantsForEsc(id).filter((m: Mantenimiento) => m.tipo === 'correctivo')
 const hasType           = (id: number, tipo: string) =>
   mantsForEsc(id).some((m: Mantenimiento) => m.tipo === tipo)
 const horasForEsc       = (id: number) =>
   mantsForEsc(id).reduce((s: number, m: Mantenimiento) => s + (m.horas || 0), 0)
-const equiposNotasForEsc = (id: number) => {
-  const notas = eventosForEsc(id).map((e: Evento) => e.equipos_notas).filter(Boolean)
-  return [...new Set(notas)].join(' · ')
-}
 const tiposRealizados = (id: number) => {
   const tipos = [...new Set(mantsForEsc(id).map((m: Mantenimiento) => MANTENIMIENTO_TIPOS[m.tipo] || m.tipo))]
   return tipos.length ? `(${tipos.join(', ')})` : ''
 }
+
+// ── Foto helpers ──────────────────────────────────────────
+function getFotos(m: Mantenimiento, tipo: 'antes' | 'despues'): MantenimientoFoto[] {
+  const fotos = (m.fotos || []) as any[]
+  return fotos
+    .map((f: any): MantenimientoFoto =>
+      typeof f === 'string'
+        ? { url: f, path: f, tipo: 'despues' }
+        : { url: f.url, path: f.path, tipo: f.tipo === 'antes' ? 'antes' : 'despues' },
+    )
+    .filter(f => f.tipo === tipo)
+}
+
+function getEventoFotos(e: Evento): EventoFoto[] {
+  const fotos = (e.fotos || []) as any[]
+  return fotos.map((f: any): EventoFoto =>
+    typeof f === 'string' ? { url: `/storage/${f}`, path: f } : { url: f.url, path: f.path },
+  )
+}
+
+const totalFotosForEsc = (id: number) =>
+  mantsForEsc(id).reduce((s, m) => s + getFotos(m, 'antes').length + getFotos(m, 'despues').length, 0)
+
+const totalFotosEventosForEsc = (id: number) =>
+  eventosForEsc(id).reduce((s, e) => s + getEventoFotos(e).length, 0)
+
+const escenariosConEventos = computed<Escenario[]>(() => {
+  if (!reportData.value) return []
+  const ids = new Set<number>(reportData.value.eventos.map((e: Evento) => e.escenario_id))
+  return reportData.value.escenarios.filter((esc: Escenario) => ids.has(esc.id))
+})
 
 // ── Badge helpers ─────────────────────────────────────────
 const tipoBadge = (tipo: string) => ({
@@ -439,7 +550,13 @@ const estadoBadge = (estado: string) => ({
   pendiente:   'badge badge-gray',
 }[estado] || 'badge badge-gray')
 
-// ── Estado final table (static per Word format) ───────────
+const eventoEstadoBadge = (estado: string) => ({
+  realizado:  'badge badge-green',
+  en_curso:   'badge badge-yellow',
+  programado: 'badge badge-blue',
+  cancelado:  'badge badge-red',
+}[estado] || 'badge badge-gray')
+
 const sistemasEstado = [
   { nombre: 'Sistema de Audio y Bocinas',      estado: 'Operativo' },
   { nombre: 'Pantallas Digitales',             estado: 'Operativo' },
@@ -450,13 +567,22 @@ const sistemasEstado = [
 
 // ── Generate ──────────────────────────────────────────────
 async function generar() {
+  if (filters.tipoReporte === 'mantenimiento' && !filters.escenario_id) {
+    toast.add('Selecciona un escenario para el reporte de mantenimiento', 'error')
+    return
+  }
   loading.value = true
   try {
     const params: Record<string, unknown> = { mes: filters.mes, anio: filters.anio }
     if (filters.escenario_id) params.escenario_id = filters.escenario_id
     const { data } = await dashboardApi.reporte(params)
-    reportData.value = data
-    if (!data.mantenimientos?.length && !data.eventos?.length) {
+    reportData.value = { ...data, tipoReporte: filters.tipoReporte }
+
+    const empty = filters.tipoReporte === 'mantenimiento'
+      ? !data.mantenimientos?.length
+      : !data.eventos?.length
+
+    if (empty) {
       toast.add('Sin registros para el período seleccionado', 'info')
     } else {
       toast.add('Reporte generado')
@@ -542,9 +668,8 @@ onMounted(async () => {
   margin: 1rem 0 0.625rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.375rem;
 }
 .r-paragraph { font-size: 0.8125rem; color: #374151; line-height: 1.7; margin-bottom: 0.5rem; }
-.r-list, .r-ordered-list { font-size: 0.8125rem; color: #374151; line-height: 1.7; padding-left: 1.25rem; margin: 0.5rem 0; }
+.r-list { font-size: 0.8125rem; color: #374151; line-height: 1.7; padding-left: 1.25rem; margin: 0.5rem 0; }
 .r-list li { list-style: disc; margin-bottom: 0.25rem; }
-.r-ordered-list li { list-style: decimal; margin-bottom: 0.25rem; }
 
 /* ── Mantenimiento card ──────────────────────────────────── */
 .r-mant-card {
@@ -564,7 +689,37 @@ onMounted(async () => {
 .r-mant-text  { font-size: 0.8rem; color: #374151; line-height: 1.6; }
 .r-mant-col:only-child { grid-column: 1 / -1; }
 
-/* ── Fotos ───────────────────────────────────────────────── */
+/* ── Fotos antes/después ─────────────────────────────────── */
+.r-fotos-pair {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #f1f5f9;
+}
+.r-fotos-side { padding: 0.875rem; }
+.r-fotos-side + .r-fotos-side { border-left: 1px solid #f1f5f9; }
+.r-fotos-side-title {
+  font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: #475569;
+  display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem;
+}
+.r-dot { width: 0.5rem; height: 0.5rem; border-radius: 9999px; display: inline-block; }
+.r-dot-antes   { background: #f59e0b; }
+.r-dot-despues { background: #10b981; }
+.r-fotos-count {
+  margin-left: auto; font-size: 0.625rem; font-weight: 700;
+  color: #64748b; background: #f1f5f9; padding: 0.075rem 0.4rem; border-radius: 9999px;
+}
+.r-fotos-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+.r-fotos-empty {
+  font-size: 0.7rem; color: #94a3b8; font-style: italic;
+  text-align: center; padding: 0.5rem 0;
+  border: 1px dashed #e2e8f0; border-radius: 0.4rem;
+}
+.r-fotos-none {
+  text-align: center; font-size: 0.7rem; color: #94a3b8;
+  font-style: italic; padding: 0.625rem; border-top: 1px solid #f1f5f9;
+}
+
+/* ── Fotos eventos (single grid) ─────────────────────────── */
 .r-fotos-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
   padding: 0.875rem; border-top: 1px solid #f1f5f9;
@@ -588,7 +743,6 @@ onMounted(async () => {
 .r-table-compact td { padding: 0.375rem 0.75rem; }
 .r-td-label  { color: #374151; font-size: 0.8rem; }
 .r-td-status { font-weight: 600; color: #1e3a5f; text-align: center; }
-.r-td-status.ok { color: #059669; }
 
 /* ── Signatures ──────────────────────────────────────────── */
 .r-signatures {
