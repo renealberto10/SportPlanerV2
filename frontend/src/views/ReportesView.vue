@@ -150,8 +150,8 @@
                 <div class="r-kpi-lbl">Piezas reemplazadas</div>
               </div>
               <div class="r-kpi r-kpi-cyan">
-                <div class="r-kpi-num">{{ equiposForEsc(esc.id).length }}</div>
-                <div class="r-kpi-lbl">Equipos del escenario</div>
+                <div class="r-kpi-num">{{ mantsForEsc(esc.id).filter(m => m.estado === 'completado').length }}</div>
+                <div class="r-kpi-lbl">Visitas completadas</div>
               </div>
               <div class="r-kpi r-kpi-rose">
                 <div class="r-kpi-num">{{ totalFotosForEsc(esc.id) }}</div>
@@ -417,35 +417,6 @@
                       {{ p.estado_bodega }}
                     </span>
                   </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- 7. INVENTARIO DE EQUIPOS DEL ESCENARIO -->
-          <div class="r-section" v-if="equiposForEsc(esc.id).length">
-            <div class="r-section-title">{{ piezasForEsc(esc.id).length ? '7' : '6' }}. Inventario de Equipos del Escenario</div>
-            <p class="r-paragraph">
-              El escenario cuenta con un total de <strong>{{ equiposForEsc(esc.id).length }} equipos</strong>
-              registrados en inventario, distribuidos como sigue:
-            </p>
-            <table class="r-table">
-              <thead>
-                <tr>
-                  <th>Equipo</th>
-                  <th>Tipo</th>
-                  <th>Modelo</th>
-                  <th>Serie</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="eq in equiposForEsc(esc.id)" :key="eq.id">
-                  <td class="font-medium">{{ eq.nombre }}</td>
-                  <td class="capitalize">{{ eq.tipo }}</td>
-                  <td class="text-xs">{{ eq.modelo || '—' }}</td>
-                  <td class="font-mono text-xs">{{ eq.serie || '—' }}</td>
-                  <td><span :class="equipoEstadoBadge(eq.estado)">{{ eq.estado }}</span></td>
                 </tr>
               </tbody>
             </table>
@@ -754,10 +725,9 @@ const tiposRealizados = (id: number) => {
   return tipos.length ? `(${tipos.join(', ')})` : ''
 }
 const resultsSectionNum = (id: number) => {
-  // Sections 1-5 fixed; 6 piezas (if any), 7 equipos (if any), then resultados.
+  // Sections 1-5 fixed; 6 piezas (if any), then resultados.
   let n = 6
   if (piezasForEsc(id).length) n++
-  if (equiposForEsc(id).length) n++
   return n
 }
 
