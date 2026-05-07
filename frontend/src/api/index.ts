@@ -7,7 +7,11 @@ import type {
 
 const api = axios.create({
   baseURL: '/api/v1',
-  headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+  // NOTE: do NOT force a default 'Content-Type' here. Axios sets
+  // 'application/json' automatically for plain objects and lets FormData
+  // pick the proper 'multipart/form-data; boundary=...' on its own.
+  // Forcing JSON would silently re-serialize FormData and break uploads.
+  headers: { Accept: 'application/json' },
 })
 
 // Attach token from localStorage on every request
@@ -80,7 +84,6 @@ export const mantenimientoApi = {
     form.append('foto', file)
     return api.post<{ url: string; path: string; fotos: Array<{ path: string; url: string }> }>(
       `/mantenimientos/${id}/fotos`, form,
-      { headers: { 'Content-Type': undefined } },
     )
   },
   removeFoto: (id: number, path: string) =>
@@ -98,7 +101,6 @@ export const eventoApi = {
     form.append('foto', file)
     return api.post<{ url: string; path: string; fotos: Array<{ path: string; url: string }> }>(
       `/eventos/${id}/fotos`, form,
-      { headers: { 'Content-Type': undefined } },
     )
   },
   removeFoto: (id: number, path: string) =>
@@ -129,7 +131,6 @@ export const solicitudApi = {
     form.append('foto', file)
     return api.post<{ url: string; path: string; fotos: Array<{ path: string; url: string }> }>(
       `/solicitudes/${id}/fotos`, form,
-      { headers: { 'Content-Type': undefined } },
     )
   },
   removeFoto: (id: number, path: string) =>
