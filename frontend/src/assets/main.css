@@ -221,19 +221,23 @@ aside ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radi
 
 /* ─── Print ─────────────────────────────────────────── */
 @media print {
-  #sidebar, .no-print { display: none !important; }
-  #main { margin: 0 !important; overflow: visible !important; }
-  body  { background: white !important; overflow: visible !important; }
+  /* Liberar el viewport-lock del shell (flex h-screen overflow-hidden) */
+  html, body, #app {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+  #app > div, #app > div > * {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  #sidebar, .no-print, aside, nav, header.app-header { display: none !important; }
+  #main, main { margin: 0 !important; padding: 0 !important; overflow: visible !important; height: auto !important; }
   .card { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
-
-  /* Report page breaks */
-  #reporte-doc > div { break-inside: avoid; page-break-inside: avoid; }
-  .print-escenario   { break-inside: avoid; page-break-inside: avoid; margin-bottom: 2rem; }
-
-  /* Photo grid in print: 3 per row, fixed height */
-  .foto-grid        { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
-  .foto-grid img    { width: 100%; height: 140px; object-fit: cover; border-radius: 6px; }
-  .foto-caption     { font-size: 9px; color: #64748b; margin-top: 3px; }
-  .foto-section-hdr { font-size: 9px; font-weight: 700; text-transform: uppercase;
-                      letter-spacing: 0.1em; color: #1e3a5f; margin-bottom: 6px; }
 }
