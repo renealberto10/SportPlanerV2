@@ -605,48 +605,101 @@
       </div>
 
       <!-- Una página por escenario -->
-      <div v-for="esc in escenariosConEventos" :key="'e-'+esc.id">
-        <div class="page-break no-screen"></div>
+      <div v-for="(esc, escIdx) in escenariosConEventos" :key="'e-'+esc.id"
+           :class="['r-esc-block', escIdx > 0 ? 'page-break-before' : '']">
         <div class="report-page">
-          <div class="r-header">
-            <div class="r-title-block">
-              <div class="r-title">EVENTOS — {{ esc.nombre }}</div>
-              <div class="r-period">{{ mesNombre(reportData.mes) }} de {{ reportData.anio }}</div>
+          <div class="r-header r-header-compact">
+            <div class="r-header-top">
+              <div class="r-logo-box">
+                <div class="r-logo-mark">SP</div>
+                <div>
+                  <div class="r-logo-name">{{ esc.nombre }}</div>
+                  <div class="r-logo-sub">Reporte de Eventos · {{ mesNombre(reportData.mes) }} {{ reportData.anio }}</div>
+                </div>
+              </div>
+              <div class="r-header-meta">
+                <div><span class="r-meta-label">Eventos:</span> {{ eventosForEsc(esc.id).length }}</div>
+                <div><span class="r-meta-label">Realizados:</span> {{ eventosForEsc(esc.id).filter(e => e.estado === 'realizado').length }}</div>
+                <div><span class="r-meta-label">Programados:</span> {{ eventosForEsc(esc.id).filter(e => e.estado === 'programado').length }}</div>
+              </div>
             </div>
           </div>
 
-          <div v-for="ev in eventosForEsc(esc.id)" :key="ev.id" class="r-mant-card">
-            <div class="r-mant-header">
-              <div class="r-mant-fecha">{{ fmtDate(ev.fecha) }}<span v-if="ev.hora" class="text-slate-400 font-normal ml-1">{{ ev.hora }}</span></div>
-              <span class="badge badge-blue capitalize">{{ ev.tipo }}</span>
-              <span :class="eventoEstadoBadge(ev.estado)">{{ ev.estado }}</span>
-              <div class="r-mant-tec">{{ ev.nombre }}</div>
+          <!-- Tabla resumen del escenario -->
+          <div class="r-section">
+            <div class="r-section-title">Bitácora de eventos</div>
+            <table class="r-table r-table-compact">
+              <thead>
+                <tr>
+                  <th style="width:2.4rem">#</th>
+                  <th style="width:5.2rem">Fecha</th>
+                  <th style="width:3.2rem">Hora</th>
+                  <th>Evento</th>
+                  <th style="width:5rem">Tipo</th>
+                  <th style="width:5.2rem">Estado</th>
+                  <th class="text-center" style="width:3rem">Fotos</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(ev, i) in eventosForEsc(esc.id)" :key="'r-'+ev.id">
+                  <td class="text-center">{{ i + 1 }}</td>
+                  <td>{{ fmtDate(ev.fecha) }}</td>
+                  <td>{{ ev.hora || '—' }}</td>
+                  <td class="font-semibold">{{ ev.nombre }}</td>
+                  <td class="capitalize">{{ ev.tipo }}</td>
+                  <td><span :class="eventoEstadoBadge(ev.estado)">{{ ev.estado }}</span></td>
+                  <td class="text-center">{{ getEventoFotos(ev).length }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Detalle por evento -->
+          <div class="r-section">
+            <div class="r-section-title">Detalle de eventos</div>
+
+            <div v-for="(ev, i) in eventosForEsc(esc.id)" :key="ev.id" class="r-ev-card">
+              <div class="r-ev-head">
+                <div class="r-ev-num">#{{ i + 1 }}</div>
+                <div class="r-ev-title">{{ ev.nombre }}</div>
+                <span :class="eventoEstadoBadge(ev.estado)">{{ ev.estado }}</span>
+              </div>
+
+              <div class="r-ev-meta">
+                <div class="r-meta-cell"><div class="r-meta-k">Fecha</div><div class="r-meta-v">{{ fmtDate(ev.fecha) }}</div></div>
+                <div class="r-meta-cell"><div class="r-meta-k">Hora</div><div class="r-meta-v">{{ ev.hora || '—' }}</div></div>
+                <div class="r-meta-cell"><div class="r-meta-k">Tipo</div><div class="r-meta-v capitalize">{{ ev.tipo }}</div></div>
+                <div class="r-meta-cell" v-if="ev.personal"><div class="r-meta-k">Personal técnico</div><div class="r-meta-v">{{ ev.personal }}</div></div>
+              </div>
+
+              <div v-if="ev.descripcion || ev.equipos_notas" class="r-ev-body">
+                <div v-if="ev.descripcion">
+                  <div class="r-mant-label">Descripción</div>
+                  <div class="r-mant-text">{{ ev.descripcion }}</div>
+                </div>
+                <div v-if="ev.equipos_notas" class="mt-2">
+                  <div class="r-mant-label">Equipos / Notas técnicas</div>
+                  <div class="r-mant-text">{{ ev.equipos_notas }}</div>
+                </div>
+              </div>
+
+              <div v-if="getEventoFotos(ev).length" class="r-ev-fotos">
+                <div class="r-ev-fotos-title">Evidencia fotográfica ({{ getEventoFotos(ev).length }})</div>
+                <div class="r-fotos-grid">
+                  <div v-for="(f, fi) in getEventoFotos(ev)" :key="fi" class="r-foto-item">
+                    <img :src="f.url" class="r-foto-img" />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="r-mant-body">
-              <div class="r-mant-col" v-if="ev.descripcion">
-                <div class="r-mant-label">Descripción</div>
-                <div class="r-mant-text">{{ ev.descripcion }}</div>
-              </div>
-              <div class="r-mant-col" v-if="ev.personal">
-                <div class="r-mant-label">Personal técnico</div>
-                <div class="r-mant-text">{{ ev.personal }}</div>
-              </div>
-              <div class="r-mant-col" v-if="ev.equipos_notas" style="grid-column: 1 / -1">
-                <div class="r-mant-label">Equipos / Notas técnicas</div>
-                <div class="r-mant-text">{{ ev.equipos_notas }}</div>
-              </div>
-            </div>
-
-            <div v-if="getEventoFotos(ev).length" class="r-fotos-grid">
-              <div v-for="(f, i) in getEventoFotos(ev)" :key="i" class="r-foto-item">
-                <img :src="f.url" class="r-foto-img" />
-              </div>
+            <div v-if="!eventosForEsc(esc.id).length" class="r-paragraph text-slate-500 italic">
+              Sin eventos registrados en este escenario para el período.
             </div>
           </div>
 
           <div class="r-footer">
-            SportPlanner · Eventos {{ esc.nombre }} · {{ mesNombre(reportData.mes) }} {{ reportData.anio }}
+            SportPlanner · {{ esc.nombre }} · {{ mesNombre(reportData.mes) }} {{ reportData.anio }}
           </div>
         </div>
       </div>
@@ -958,8 +1011,14 @@ onMounted(async () => {
   max-width: 900px;
   margin-left: auto; margin-right: auto;
 }
-/* Page break entre escenarios para html2pdf y print */
+/* Page-break entre escenarios para html2pdf y print */
 .report-page + .report-page {
+  page-break-before: always;
+  break-before: page;
+}
+/* Bloques de escenario también respetan el salto */
+.r-esc-block + .r-esc-block,
+.report-page + .r-esc-block {
   page-break-before: always;
   break-before: page;
 }
@@ -1165,6 +1224,73 @@ onMounted(async () => {
   border-top: 1px solid #f1f5f9; padding-top: 1rem; margin-top: 1.5rem;
 }
 
+/* ── Eventos: header compacto ────────────────────────────── */
+.r-header-compact {
+  padding-bottom: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+.r-header-compact .r-header-top { margin-bottom: 0; align-items: center; }
+.r-header-compact .r-header-meta {
+  display: flex; gap: 1.25rem; font-size: 0.75rem;
+}
+
+/* ── Eventos: card detalle ───────────────────────────────── */
+.r-ev-card {
+  border: 1px solid #cbd5e1; border-radius: 0.5rem;
+  margin-bottom: 0.75rem; overflow: hidden;
+  page-break-inside: avoid; break-inside: avoid;
+}
+.r-ev-head {
+  display: flex; align-items: center; gap: 0.625rem;
+  background: #1e3a5f; color: #ffffff;
+  padding: 0.5rem 0.75rem;
+}
+.r-ev-num {
+  font-size: 0.7rem; font-weight: 800;
+  background: rgba(255,255,255,0.18); color: #ffffff;
+  padding: 0.125rem 0.5rem; border-radius: 0.3rem;
+  letter-spacing: 0.05em;
+}
+.r-ev-title {
+  flex: 1; font-size: 0.875rem; font-weight: 700; color: #ffffff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.r-ev-head .badge {
+  background: #ffffff; color: #1e3a5f; border: 1px solid #ffffff;
+}
+
+.r-ev-meta {
+  display: flex; flex-wrap: wrap;
+  background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+}
+.r-ev-meta .r-meta-cell {
+  flex: 1 1 25%; min-width: 25%;
+  padding: 0.4rem 0.75rem;
+  border-right: 1px solid #e2e8f0;
+}
+.r-ev-meta .r-meta-cell:last-child { border-right: none; }
+
+.r-ev-body {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.r-ev-fotos { padding: 0.625rem 0.75rem; }
+.r-ev-fotos-title {
+  font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: #64748b; margin-bottom: 0.4rem;
+}
+.r-ev-fotos .r-fotos-grid {
+  padding: 0; border-top: none;
+  grid-template-columns: repeat(3, 1fr); gap: 0.4rem;
+}
+.r-ev-fotos .r-foto-img {
+  aspect-ratio: 4/3; max-height: 4.2cm;
+}
+
+/* Page-break helper para html2pdf (config: pagebreak.before) */
+.page-break-before { page-break-before: always; break-before: page; }
+
 /* ════════════════════════════════════════════════════════════
    PDF MODE — aplicado por html2pdf.js en el clon (onclone).
    Refuerza bordes, oscurece separadores y oculta cualquier
@@ -1186,6 +1312,27 @@ onMounted(async () => {
   margin: 0 0 8mm 0 !important;
   max-width: none !important;
   width: 100% !important;
+}
+
+/* Eventos en PDF: bordes definidos */
+.pdf-mode .r-ev-card {
+  border: 1px solid #475569 !important;
+  border-radius: 4px !important;
+  margin-bottom: 8px !important;
+}
+.pdf-mode .r-ev-head {
+  background: #1e3a5f !important;
+  color: #ffffff !important;
+}
+.pdf-mode .r-ev-meta {
+  background: #f1f5f9 !important;
+  border-bottom: 1px solid #94a3b8 !important;
+}
+.pdf-mode .r-ev-meta .r-meta-cell {
+  border-right: 1px solid #cbd5e1 !important;
+}
+.pdf-mode .r-ev-body {
+  border-bottom: 1px solid #cbd5e1 !important;
 }
 
 /* Bordes más oscuros y consistentes */
