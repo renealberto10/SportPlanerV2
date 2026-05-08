@@ -64,31 +64,60 @@
         placeholder="Describe detalladamente lo que se hizo:&#10;• Limpieza de gabinetes y ventiladores&#10;• Calibración de pantallas&#10;• Revisión de cableado…" />
     </div>
 
-    <!-- Sección 4: Fotos -->
+    <!-- Sección 4: Fotos ANTES -->
     <div class="form-section">
       <div class="flex items-center justify-between mb-3">
-        <div class="form-section-title mb-0">Registro fotográfico</div>
-        <span class="text-xs text-slate-400">{{ fotos.length }} foto{{ fotos.length !== 1 ? 's' : '' }}</span>
+        <div class="form-section-title mb-0">📷 Fotos ANTES del mantenimiento</div>
+        <span class="text-xs text-slate-400">{{ fotosAntes.length }} foto{{ fotosAntes.length !== 1 ? 's' : '' }}</span>
       </div>
+      <p class="text-xs text-slate-400 mb-3">Estado inicial del equipo o escenario.</p>
 
-      <div class="grid grid-cols-3 gap-2 mb-3">
-        <div v-for="(f, i) in fotos" :key="i" class="foto-thumb">
+      <div v-if="fotosAntes.length" class="grid grid-cols-3 gap-2 mb-3">
+        <div v-for="(f, i) in fotosAntes" :key="'a'+i" class="foto-thumb">
           <img :src="f.preview" />
-          <button class="foto-del" @click="removePhoto(i)">✕</button>
+          <button class="foto-del" @click="removePhoto('antes', i)">✕</button>
         </div>
       </div>
 
-      <!-- Camera buttons -->
       <div class="grid grid-cols-2 gap-2">
         <label class="foto-add-btn">
           <CameraIcon class="w-6 h-6" />
           <span class="text-xs font-semibold">Tomar foto</span>
-          <input type="file" accept="image/*" capture="environment" class="hidden" @change="addFoto" />
+          <input type="file" accept="image/*" capture="environment" class="hidden" @change="addFoto($event, 'antes')" />
         </label>
         <label class="foto-add-btn">
           <PhotoIcon class="w-6 h-6" />
-          <span class="text-xs font-semibold">Galería</span>
-          <input type="file" accept="image/*" multiple class="hidden" @change="addFotos" />
+          <span class="text-xs font-semibold">Galería (varias)</span>
+          <input type="file" accept="image/*" multiple class="hidden" @change="addFotos($event, 'antes')" />
+        </label>
+      </div>
+    </div>
+
+    <!-- Sección 4b: Fotos DESPUÉS -->
+    <div class="form-section">
+      <div class="flex items-center justify-between mb-3">
+        <div class="form-section-title mb-0">✅ Fotos DESPUÉS del mantenimiento</div>
+        <span class="text-xs text-slate-400">{{ fotosDespues.length }} foto{{ fotosDespues.length !== 1 ? 's' : '' }}</span>
+      </div>
+      <p class="text-xs text-slate-400 mb-3">Resultado final tras la intervención.</p>
+
+      <div v-if="fotosDespues.length" class="grid grid-cols-3 gap-2 mb-3">
+        <div v-for="(f, i) in fotosDespues" :key="'d'+i" class="foto-thumb">
+          <img :src="f.preview" />
+          <button class="foto-del" @click="removePhoto('despues', i)">✕</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <label class="foto-add-btn">
+          <CameraIcon class="w-6 h-6" />
+          <span class="text-xs font-semibold">Tomar foto</span>
+          <input type="file" accept="image/*" capture="environment" class="hidden" @change="addFoto($event, 'despues')" />
+        </label>
+        <label class="foto-add-btn">
+          <PhotoIcon class="w-6 h-6" />
+          <span class="text-xs font-semibold">Galería (varias)</span>
+          <input type="file" accept="image/*" multiple class="hidden" @change="addFotos($event, 'despues')" />
         </label>
       </div>
     </div>
@@ -235,22 +264,29 @@ function onTecnicoChange() {
 
 // ── Photos ────────────────────────────────────────────────
 interface LocalPhoto { file: File; preview: string }
-const fotos = ref<LocalPhoto[]>([])
+type FotoTipo = 'antes' | 'despues'
+const fotosAntes   = ref<LocalPhoto[]>([])
+const fotosDespues = ref<LocalPhoto[]>([])
+const totalFotos = computed(() => fotosAntes.value.length + fotosDespues.value.length)
 
-function addFoto(e: Event) {
+function bucket(tipo: FotoTipo) {
+  return tipo === 'antes' ? fotosAntes : fotosDespues
+}
+function addFoto(e: Event, tipo: FotoTipo) {
   const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) fotos.value.push({ file, preview: URL.createObjectURL(file) })
+  if (file) bucket(tipo).value.push({ file, preview: URL.createObjectURL(file) })
   ;(e.target as HTMLInputElement).value = ''
 }
-function addFotos(e: Event) {
+function addFotos(e: Event, tipo: FotoTipo) {
   Array.from((e.target as HTMLInputElement).files ?? []).forEach(file =>
-    fotos.value.push({ file, preview: URL.createObjectURL(file) })
+    bucket(tipo).value.push({ file, preview: URL.createObjectURL(file) })
   )
   ;(e.target as HTMLInputElement).value = ''
 }
-function removePhoto(i: number) {
-  URL.revokeObjectURL(fotos.value[i].preview)
-  fotos.value.splice(i, 1)
+function removePhoto(tipo: FotoTipo, i: number) {
+  const arr = bucket(tipo).value
+  URL.revokeObjectURL(arr[i].preview)
+  arr.splice(i, 1)
 }
 
 // ── Piezas ────────────────────────────────────────────────
@@ -266,9 +302,12 @@ async function save() {
   try {
     const { data: mant } = await mantenimientoApi.create(form.value as never)
 
-    // Upload photos
-    for (const f of fotos.value) {
-      await mantenimientoApi.uploadFoto(mant.id, f.file)
+    // Upload photos (antes y después)
+    for (const f of fotosAntes.value) {
+      await mantenimientoApi.uploadFoto(mant.id, f.file, 'antes')
+    }
+    for (const f of fotosDespues.value) {
+      await mantenimientoApi.uploadFoto(mant.id, f.file, 'despues')
     }
 
     // Save piezas
@@ -292,7 +331,7 @@ async function save() {
       } as never)
     }
 
-    toast.add(`Mantenimiento guardado — ${fotos.value.length} foto(s) adjunta(s)`)
+    toast.add(`Mantenimiento guardado — ${totalFotos.value} foto(s) adjunta(s) (${fotosAntes.value.length} antes / ${fotosDespues.value.length} después)`)
     router.push('/campo')
   } catch (e) {
     handleError(e, 'Error al guardar el registro')
