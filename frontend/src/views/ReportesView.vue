@@ -1294,7 +1294,7 @@ onMounted(async () => {
   page-break-inside: avoid; break-inside: avoid;
 }
 .r-ev-head {
-  display: flex; align-items: center; gap: 0.625rem;
+  display: flex; align-items: flex-start; gap: 0.625rem;
   background: #1e3a5f; color: #ffffff;
   padding: 0.5rem 0.75rem;
 }
@@ -1303,13 +1303,18 @@ onMounted(async () => {
   background: rgba(255,255,255,0.18); color: #ffffff;
   padding: 0.125rem 0.5rem; border-radius: 0.3rem;
   letter-spacing: 0.05em;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
 }
 .r-ev-title {
-  flex: 1; font-size: 0.875rem; font-weight: 700; color: #ffffff;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 1 1 auto; min-width: 0;
+  font-size: 0.875rem; font-weight: 700; color: #ffffff; line-height: 1.25;
+  white-space: normal; overflow: visible; text-overflow: clip;
+  word-break: break-word; overflow-wrap: anywhere;
 }
 .r-ev-head .badge {
   background: #ffffff; color: #1e3a5f; border: 1px solid #ffffff;
+  flex-shrink: 0; white-space: nowrap;
 }
 
 .r-ev-meta {
