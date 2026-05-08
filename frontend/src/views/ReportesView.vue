@@ -768,32 +768,55 @@ const printDoc = async () => {
   document.body.appendChild(wrapper)
 
   try {
-    // Esperar a que las imágenes del clon se carguen (evita bloques en blanco)
-    const imgs = Array.from(clone.querySelectorAll('img'))
-    await Promise.all(
-      imgs.map(
-        (img) =>
-          new Promise<void>((resolve) => {
-            if (img.complete && img.naturalWidth > 0) return resolve()
-            img.onload = () => resolve()
-            img.onerror = () => resolve()
-          }),
-      ),
-    )
+    // 1) Convertir TODAS las imágenes del clon a data-URL (evita problemas
+    //    de CORS / canvas tainted que generan PDF en blanco) y limitar tamaño.
+    const imgs = Array.from(clone.querySelectorAll('img')) as HTMLImageElement[]
+    await Promise.all(imgs.map(async (img) => {
+      try {
+        if (img.src.startsWith('data:')) return
+        const res = await fetch(img.src, { credentials: 'omit', mode: 'cors' })
+        if (!res.ok) throw new Error(String(res.status))
+        const blob = await res.blob()
+        const dataUrl: string = await new Promise((resolve, reject) => {
+          const fr = new FileReader()
+          fr.onload = () => resolve(fr.result as string)
+          fr.onerror = () => reject(fr.error)
+          fr.readAsDataURL(blob)
+        })
+        img.src = dataUrl
+        // Esperar a que el navegador termine de decodificarla
+        if (typeof img.decode === 'function') {
+          try { await img.decode() } catch { /* ignore */ }
+        } else {
+          await new Promise<void>((r) => { img.onload = () => r(); img.onerror = () => r() })
+        }
+      } catch (err) {
+        console.warn('[PDF] no se pudo precargar imagen', img.src, err)
+        // Sustituir por placeholder transparente para no romper layout
+        img.removeAttribute('srcset')
+        img.style.background = '#f1f5f9'
+      }
+    }))
 
     const periodo  = `${mesNombre(reportData.value?.mes || 0)}_${reportData.value?.anio || ''}`
     const tipo     = reportData.value?.tipoReporte === 'eventos' ? 'Eventos' : 'Mantenimiento'
     const filename = `Reporte_${tipo}_${periodo}.pdf`.replace(/\s+/g, '_')
 
+    // 2) Calcular escala segura para no superar el límite de canvas (~16384 px)
+    //    Usamos la altura real del clon a 900px de ancho.
+    const cloneHeightPx = clone.scrollHeight || clone.offsetHeight || 1
+    const MAX_CANVAS = 14000 // margen de seguridad bajo el límite del navegador
+    const safeScale = Math.min(2, Math.max(1, MAX_CANVAS / cloneHeightPx))
+
     await html2pdf()
       .set({
         margin: [10, 10, 12, 10], // mm: top, right, bottom, left
         filename,
-        image:       { type: 'jpeg', quality: 0.95 },
+        image:       { type: 'jpeg', quality: 0.92 },
         html2canvas: {
-          scale: 2,
+          scale: safeScale,
           useCORS: true,
-          allowTaint: false,
+          allowTaint: true,
           logging: false,
           backgroundColor: '#ffffff',
           windowWidth: 1180,
@@ -802,7 +825,7 @@ const printDoc = async () => {
             node.classList?.contains('no-print') ||
             node.tagName === 'BUTTON',
         },
-        jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
         pagebreak:   { mode: ['css', 'legacy'], before: '.page-break-before', avoid: ['.r-mant-card', '.r-ev-card', '.r-foto-block', '.r-section', 'tr'] },
       } as any)
       .from(clone)
