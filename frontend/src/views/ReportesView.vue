@@ -743,12 +743,46 @@ const mesNombre = (m: number) => MESES[m - 1] || ''
 // ── PDF generation (html2pdf.js) ──────────────────────────
 const generatingPdf = ref(false)
 const printDoc = async () => {
-  const el = document.getElementById('reporte-doc')
-  if (!el) { toast.error('No se encontró el reporte'); return }
+  const original = document.getElementById('reporte-doc')
+  if (!original) { toast.error('No se encontró el reporte'); return }
   generatingPdf.value = true
+
+  // Clonamos el reporte y lo montamos en un wrapper aislado anclado al <body>.
+  // Esto evita que el padre `flex h-screen overflow-hidden` de la app le
+  // imponga altura 0 a html2canvas y se genere un PDF en blanco.
+  const wrapper = document.createElement('div')
+  wrapper.style.position = 'fixed'
+  wrapper.style.left = '-99999px'
+  wrapper.style.top = '0'
+  wrapper.style.width = '900px'           // ancho fijo similar al de pantalla
+  wrapper.style.background = '#ffffff'
+  wrapper.style.zIndex = '-1'
+  wrapper.style.padding = '0'
+  wrapper.style.margin = '0'
+
+  const clone = original.cloneNode(true) as HTMLElement
+  clone.classList.add('pdf-mode')
+  clone.style.maxWidth = 'none'
+  clone.style.width = '100%'
+  wrapper.appendChild(clone)
+  document.body.appendChild(wrapper)
+
   try {
-    const periodo = `${mesNombre(reportData.value?.mes || 0)}_${reportData.value?.anio || ''}`
-    const tipo    = reportData.value?.tipoReporte === 'eventos' ? 'Eventos' : 'Mantenimiento'
+    // Esperar a que las imágenes del clon se carguen (evita bloques en blanco)
+    const imgs = Array.from(clone.querySelectorAll('img'))
+    await Promise.all(
+      imgs.map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete && img.naturalWidth > 0) return resolve()
+            img.onload = () => resolve()
+            img.onerror = () => resolve()
+          }),
+      ),
+    )
+
+    const periodo  = `${mesNombre(reportData.value?.mes || 0)}_${reportData.value?.anio || ''}`
+    const tipo     = reportData.value?.tipoReporte === 'eventos' ? 'Eventos' : 'Mantenimiento'
     const filename = `Reporte_${tipo}_${periodo}.pdf`.replace(/\s+/g, '_')
 
     await html2pdf()
@@ -763,25 +797,21 @@ const printDoc = async () => {
           logging: false,
           backgroundColor: '#ffffff',
           windowWidth: 1180,
-          // Saltar cualquier control / botón / bloque no-imprimible
+          // Ignorar cualquier control / botón
           ignoreElements: (node: Element) =>
             node.classList?.contains('no-print') ||
             node.tagName === 'BUTTON',
-          // Aplicar clase .pdf-mode al clon para reforzar bordes y contraste
-          onclone: (doc: Document) => {
-            const root = doc.getElementById('reporte-doc')
-            if (root) root.classList.add('pdf-mode')
-          },
         },
         jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:   { mode: ['css', 'legacy'], before: '.page-break-before', avoid: ['.r-mant-card', '.r-foto-block', '.r-section', 'tr'] },
+        pagebreak:   { mode: ['css', 'legacy'], before: '.page-break-before', avoid: ['.r-mant-card', '.r-ev-card', '.r-foto-block', '.r-section', 'tr'] },
       } as any)
-      .from(el)
+      .from(clone)
       .save()
   } catch (e) {
     console.error(e)
     toast.error('Error generando el PDF')
   } finally {
+    if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper)
     generatingPdf.value = false
   }
 }
