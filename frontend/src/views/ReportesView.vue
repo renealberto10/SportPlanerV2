@@ -8,7 +8,7 @@
       </div>
       <div v-if="reportData" class="flex gap-2">
         <button class="btn btn-outline" @click="reportData = null">✕ Cerrar</button>
-        <button class="btn btn-success" @click="printDoc">Imprimir / PDF</button>
+        <button class="btn btn-success" :disabled="generatingPdf" @click="printDoc">{{ generatingPdf ? "Generando PDF..." : "Descargar PDF" }}</button>
       </div>
     </div>
 
@@ -538,7 +538,7 @@
 
       <div class="text-center no-print mt-6 pb-6">
         <button class="btn btn-outline" @click="reportData = null">← Volver</button>
-        <button class="btn btn-success ml-2" @click="printDoc">Imprimir / Exportar PDF</button>
+        <button class="btn btn-success ml-2" :disabled="generatingPdf" @click="printDoc">{{ generatingPdf ? "Generando PDF..." : "Descargar PDF" }}</button>
       </div>
     </div>
 
@@ -653,7 +653,7 @@
 
       <div class="text-center no-print mt-6 pb-6">
         <button class="btn btn-outline" @click="reportData = null">← Volver</button>
-        <button class="btn btn-success ml-2" @click="printDoc">Imprimir / Exportar PDF</button>
+        <button class="btn btn-success ml-2" :disabled="generatingPdf" @click="printDoc">{{ generatingPdf ? "Generando PDF..." : "Descargar PDF" }}</button>
       </div>
     </div>
   </div>
@@ -661,6 +661,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+// @ts-ignore — html2pdf.js no provee tipos oficiales
+import html2pdf from 'html2pdf.js'
 import { dashboardApi, escenarioApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useApiError } from '@/composables/useApiError'
@@ -684,7 +686,43 @@ const filters = reactive({
 const config = reactive({ contratista: 'ISATECH, S.A.S. de C.V.', administrador: 'INDES' })
 
 const mesNombre = (m: number) => MESES[m - 1] || ''
-const printDoc  = () => globalThis.print()
+
+// ── PDF generation (html2pdf.js) ──────────────────────────
+const generatingPdf = ref(false)
+const printDoc = async () => {
+  const el = document.getElementById('reporte-doc')
+  if (!el) { toast.error('No se encontró el reporte'); return }
+  generatingPdf.value = true
+  try {
+    const periodo = `${mesNombre(reportData.value?.mes || 0)}_${reportData.value?.anio || ''}`
+    const tipo    = reportData.value?.tipoReporte === 'eventos' ? 'Eventos' : 'Mantenimiento'
+    const filename = `Reporte_${tipo}_${periodo}.pdf`.replace(/\s+/g, '_')
+
+    await html2pdf()
+      .set({
+        margin: [10, 10, 12, 10], // mm: top, right, bottom, left
+        filename,
+        image:       { type: 'jpeg', quality: 0.92 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: 1200,
+        },
+        jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:   { mode: ['css', 'legacy'], before: '.page-break-before', avoid: ['.r-mant-card', '.r-foto-block', '.r-section', 'tr'] },
+      })
+      .from(el)
+      .save()
+  } catch (e) {
+    console.error(e)
+    toast.error('Error generando el PDF')
+  } finally {
+    generatingPdf.value = false
+  }
+}
 
 const canGenerate = computed(() =>
   filters.tipoReporte === 'eventos' || !!filters.escenario_id,
@@ -910,6 +948,11 @@ onMounted(async () => {
   margin-bottom: 2rem;
   max-width: 900px;
   margin-left: auto; margin-right: auto;
+}
+/* Page break entre escenarios para html2pdf y print */
+.report-page + .report-page {
+  page-break-before: always;
+  break-before: page;
 }
 
 /* ── Header ─────────────────────────────────────────────── */
