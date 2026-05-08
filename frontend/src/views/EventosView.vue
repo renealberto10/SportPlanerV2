@@ -176,9 +176,13 @@
               <label class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-xl p-6 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/40 transition-all mb-5"
                      :class="{ 'opacity-50 pointer-events-none': uploadingFoto }">
                 <CameraIcon class="w-8 h-8 text-slate-300" />
-                <span class="text-sm text-slate-500 font-medium">{{ uploadingFoto ? 'Subiendo foto…' : 'Clic o arrastra una foto aquí' }}</span>
-                <span class="text-xs text-slate-400">JPG, PNG, WebP — máx. 10 MB</span>
-                <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
+                <span class="text-sm text-slate-500 font-medium">
+                  {{ uploadingFoto
+                     ? `Subiendo ${uploadDone}/${uploadTotal}…`
+                     : 'Clic para seleccionar fotos (puedes elegir varias)' }}
+                </span>
+                <span class="text-xs text-slate-400">JPG, PNG, WebP — máx. 10 MB cada una</span>
+                <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple class="hidden"
                        :disabled="uploadingFoto" @change="handleFotoUpload" />
               </label>
               <div v-if="currentFotos.length" class="grid grid-cols-3 gap-3">
@@ -235,6 +239,8 @@ const toDelete   = ref<Evento | null>(null)
 const showFotos     = ref(false)
 const fotosEvento   = ref<Evento | null>(null)
 const uploadingFoto = ref(false)
+const uploadDone    = ref(0)
+const uploadTotal   = ref(0)
 
 // ── Client-side filters (no server-filter by estado — prevents disappearing items) ──
 const search         = ref('')
@@ -268,16 +274,38 @@ const currentFotos = computed<EventoFoto[]>(() => {
 function openFotos(e: Evento) { fotosEvento.value = e; showFotos.value = true }
 
 async function handleFotoUpload(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file || !fotosEvento.value) return
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  if (!files.length || !fotosEvento.value) return
   uploadingFoto.value = true
-  try {
-    const res = await eventoApi.uploadFoto(fotosEvento.value.id, file)
-    fotosEvento.value.fotos = res.data.fotos as EventoFoto[]
+  uploadDone.value    = 0
+  uploadTotal.value   = files.length
+  let okCount = 0, errCount = 0
+  let lastFotos: EventoFoto[] | null = null
+  for (const file of files) {
+    try {
+      const res = await eventoApi.uploadFoto(fotosEvento.value.id, file)
+      lastFotos = res.data.fotos as EventoFoto[]
+      fotosEvento.value.fotos = lastFotos
+      okCount++
+    } catch (err) {
+      errCount++
+      handleError(err, `Error al subir "${file.name}"`)
+    } finally {
+      uploadDone.value++
+    }
+  }
+  if (lastFotos) {
     const idx = items.value.findIndex(ev => ev.id === fotosEvento.value!.id)
-    if (idx !== -1) items.value[idx].fotos = fotosEvento.value.fotos
-  } catch (err) { handleError(err, 'Error al subir la foto') }
-  finally { uploadingFoto.value = false; (e.target as HTMLInputElement).value = '' }
+    if (idx !== -1) items.value[idx].fotos = lastFotos
+  }
+  if (okCount) {
+    toast.add(`${okCount} foto${okCount !== 1 ? 's' : ''} agregada${okCount !== 1 ? 's' : ''}${errCount ? ` (${errCount} fallaron)` : ''}`)
+  }
+  uploadingFoto.value = false
+  uploadDone.value    = 0
+  uploadTotal.value   = 0
+  input.value = ''
 }
 
 async function deleteFoto(path: string) {

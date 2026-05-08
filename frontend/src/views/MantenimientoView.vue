@@ -218,8 +218,12 @@
                 <label class="flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-amber-200 rounded-xl p-4 cursor-pointer hover:border-amber-400 hover:bg-amber-50/40 transition-all mb-3"
                        :class="{ 'opacity-50 pointer-events-none': uploadingFoto }">
                   <CameraIcon class="w-6 h-6 text-amber-300" />
-                  <span class="text-xs text-slate-500 font-medium">{{ uploadingFoto && uploadingTipo === 'antes' ? 'Subiendo…' : 'Agregar foto ANTES' }}</span>
-                  <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
+                  <span class="text-xs text-slate-500 font-medium">
+                    {{ uploadingFoto && uploadingTipo === 'antes'
+                       ? `Subiendo ${uploadDone}/${uploadTotal}…`
+                       : 'Agregar fotos ANTES (puedes seleccionar varias)' }}
+                  </span>
+                  <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple class="hidden"
                          :disabled="uploadingFoto" @change="handleFotoUpload($event, 'antes')" />
                 </label>
                 <div v-if="fotosAntes.length" class="grid grid-cols-3 gap-3">
@@ -246,8 +250,12 @@
                 <label class="flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-emerald-200 rounded-xl p-4 cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/40 transition-all mb-3"
                        :class="{ 'opacity-50 pointer-events-none': uploadingFoto }">
                   <CameraIcon class="w-6 h-6 text-emerald-300" />
-                  <span class="text-xs text-slate-500 font-medium">{{ uploadingFoto && uploadingTipo === 'despues' ? 'Subiendo…' : 'Agregar foto DESPUÉS' }}</span>
-                  <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" class="hidden"
+                  <span class="text-xs text-slate-500 font-medium">
+                    {{ uploadingFoto && uploadingTipo === 'despues'
+                       ? `Subiendo ${uploadDone}/${uploadTotal}…`
+                       : 'Agregar fotos DESPUÉS (puedes seleccionar varias)' }}
+                  </span>
+                  <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple class="hidden"
                          :disabled="uploadingFoto" @change="handleFotoUpload($event, 'despues')" />
                 </label>
                 <div v-if="fotosDespues.length" class="grid grid-cols-3 gap-3">
@@ -313,6 +321,8 @@ const showFotos     = ref(false)
 const fotosTarget   = ref<Mantenimiento | null>(null)
 const uploadingFoto = ref(false)
 const uploadingTipo = ref<'antes' | 'despues' | null>(null)
+const uploadDone    = ref(0)
+const uploadTotal   = ref(0)
 const currentFotos  = ref<MantenimientoFoto[]>([])
 
 const fotosAntes   = computed(() => currentFotos.value.filter(f => f.tipo === 'antes'))
@@ -335,23 +345,40 @@ function openFotos(m: Mantenimiento) {
 }
 
 async function handleFotoUpload(e: Event, tipo: 'antes' | 'despues') {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file || !fotosTarget.value) return
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  if (!files.length || !fotosTarget.value) return
   uploadingFoto.value = true
   uploadingTipo.value = tipo
-  try {
-    const { data } = await mantenimientoApi.uploadFoto(fotosTarget.value.id, file, tipo)
-    currentFotos.value = data.fotos
-    const idx = items.value.findIndex(x => x.id === fotosTarget.value!.id)
-    if (idx !== -1) items.value[idx].fotos = data.fotos
-    toast.add(`Foto "${tipo === 'antes' ? 'antes' : 'después'}" agregada`)
-  } catch (err) {
-    handleError(err, 'Error al subir la foto')
-  } finally {
-    uploadingFoto.value = false
-    uploadingTipo.value = null
-    ;(e.target as HTMLInputElement).value = ''
+  uploadDone.value    = 0
+  uploadTotal.value   = files.length
+  let okCount = 0, errCount = 0
+  let lastFotos: MantenimientoFoto[] | null = null
+  for (const file of files) {
+    try {
+      const { data } = await mantenimientoApi.uploadFoto(fotosTarget.value.id, file, tipo)
+      lastFotos = data.fotos
+      currentFotos.value = data.fotos
+      okCount++
+    } catch (err) {
+      errCount++
+      handleError(err, `Error al subir "${file.name}"`)
+    } finally {
+      uploadDone.value++
+    }
   }
+  if (lastFotos) {
+    const idx = items.value.findIndex(x => x.id === fotosTarget.value!.id)
+    if (idx !== -1) items.value[idx].fotos = lastFotos
+  }
+  if (okCount) {
+    toast.add(`${okCount} foto${okCount !== 1 ? 's' : ''} "${tipo === 'antes' ? 'antes' : 'después'}" agregada${okCount !== 1 ? 's' : ''}${errCount ? ` (${errCount} fallaron)` : ''}`)
+  }
+  uploadingFoto.value = false
+  uploadingTipo.value = null
+  uploadDone.value    = 0
+  uploadTotal.value   = 0
+  input.value = ''
 }
 
 async function deleteFoto(path: string) {
