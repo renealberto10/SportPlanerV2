@@ -1156,7 +1156,7 @@ onMounted(async () => {
 }
 .r-mant-tec   { font-size: 0.75rem; color: #64748b; margin-left: auto; }
 .r-mant-hrs   { font-size: 0.75rem; font-weight: 700; color: #1e3a5f; background: #dbeafe; padding: 0.125rem 0.5rem; border-radius: 9999px; }
-.r-mant-body  { padding: 0.875rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.r-mant-body  { padding: 0.875rem; display: flex; flex-direction: column; gap: 0.75rem; }
 .r-mant-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 0.25rem; }
 .r-mant-text  { font-size: 0.8rem; color: #374151; line-height: 1.6; white-space: pre-line; }
 .r-mant-col:only-child { grid-column: 1 / -1; }
