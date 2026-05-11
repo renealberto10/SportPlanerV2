@@ -729,8 +729,26 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 // @ts-ignore — html2pdf.js no provee tipos oficiales
 import html2pdf from 'html2pdf.js'
-// @ts-ignore — html-docx-js no provee tipos oficiales
-import htmlDocx from 'html-docx-js/dist/html-docx'
+
+// html-docx-js se carga en runtime desde CDN porque usa `with` statements
+// (incompatible con rolldown/Vite en producción).
+let htmlDocxPromise: Promise<any> | null = null
+const loadHtmlDocx = (): Promise<any> => {
+  if ((window as any).htmlDocx) return Promise.resolve((window as any).htmlDocx)
+  if (htmlDocxPromise) return htmlDocxPromise
+  htmlDocxPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = 'https://unpkg.com/html-docx-js/dist/html-docx.js'
+    s.async = true
+    s.onload = () => {
+      const lib = (window as any).htmlDocx
+      if (lib) resolve(lib); else reject(new Error('html-docx-js no se pudo cargar'))
+    }
+    s.onerror = () => reject(new Error('No se pudo descargar html-docx-js'))
+    document.head.appendChild(s)
+  })
+  return htmlDocxPromise
+}
 import { dashboardApi, escenarioApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useApiError } from '@/composables/useApiError'
@@ -934,7 +952,7 @@ const printDocx = async () => {
       `<style>${cssText}\n${wordCss}</style></head>` +
       `<body>${clone.outerHTML}</body></html>`
 
-    const blob: Blob = htmlDocx.asBlob(html, {
+    const blob: Blob = (await loadHtmlDocx()).asBlob(html, {
       orientation: 'portrait',
       margins: { top: 720, right: 720, bottom: 720, left: 720 },
     })
