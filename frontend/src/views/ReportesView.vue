@@ -810,7 +810,16 @@ const printDoc = async () => {
 
     const periodo  = `${mesNombre(reportData.value?.mes || 0)}_${reportData.value?.anio || ''}`
     const tipo     = reportData.value?.tipoReporte === 'eventos' ? 'Eventos' : 'Mantenimiento'
-    const filename = `Reporte_${tipo}_${periodo}.pdf`.replace(/\s+/g, '_')
+    const sanitize = (s: string) => s
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar acentos
+      .replace(/[^a-zA-Z0-9\s_-]/g, '')                 // quitar caracteres no válidos
+      .trim()
+      .replace(/\s+/g, '_')
+    const escenarios = (reportData.value?.escenarios || []) as Escenario[]
+    const escenarioPart = escenarios.length === 1
+      ? `_${sanitize(escenarios[0].nombre)}`
+      : (escenarios.length > 1 ? `_${escenarios.length}_escenarios` : '')
+    const filename = `Reporte_${tipo}${escenarioPart}_${periodo}.pdf`.replace(/\s+/g, '_')
 
     // 2) Calcular escala segura para no superar el límite de canvas (~16384 px)
     //    Usamos la altura real del clon a 900px de ancho.
