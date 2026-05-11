@@ -267,7 +267,8 @@
                   <th>Fecha</th>
                   <th>Hora</th>
                   <th>Tipo</th>
-                  <th>Técnico</th>
+                  <th>Responsable</th>
+                  <th class="text-center">Equipo</th>
                   <th class="text-center">Hrs</th>
                   <th>Estado</th>
                   <th class="text-center">Evid.</th>
@@ -279,17 +280,18 @@
                   <td class="text-xs text-slate-500">{{ m.hora || '—' }}</td>
                   <td><span :class="tipoBadge(m.tipo)">{{ MANTENIMIENTO_TIPOS[m.tipo] || m.tipo }}</span></td>
                   <td class="text-xs">{{ m.tecnico_obj?.nombre_completo || m.tecnico || '—' }}</td>
+                  <td class="text-center text-xs font-semibold">{{ teamSize(m) }}</td>
                   <td class="text-center font-semibold">{{ m.horas || 0 }}</td>
                   <td><span :class="estadoBadge(m.estado)">{{ m.estado }}</span></td>
                   <td class="text-center text-xs">{{ getFotos(m, 'antes').length + getFotos(m, 'despues').length }}</td>
                 </tr>
                 <tr v-if="!mantsForEsc(esc.id).length">
-                  <td colspan="7" class="text-center text-slate-400 italic py-4">Sin visitas registradas en el período.</td>
+                  <td colspan="8" class="text-center text-slate-400 italic py-4">Sin visitas registradas en el período.</td>
                 </tr>
               </tbody>
               <tfoot v-if="mantsForEsc(esc.id).length">
                 <tr class="r-tfoot">
-                  <td colspan="4" class="text-right font-bold">TOTALES</td>
+                  <td colspan="5" class="text-right font-bold">TOTALES</td>
                   <td class="text-center font-bold">{{ horasForEsc(esc.id) }}</td>
                   <td></td>
                   <td class="text-center font-bold">{{ totalFotosForEsc(esc.id) }}</td>
@@ -315,7 +317,8 @@
                 </div>
                 <span :class="tipoBadge(m.tipo)">{{ MANTENIMIENTO_TIPOS[m.tipo] || m.tipo }}</span>
                 <span :class="estadoBadge(m.estado)">{{ m.estado }}</span>
-                <div class="r-mant-tec">Téc: {{ m.tecnico_obj?.nombre_completo || m.tecnico || '—' }}</div>
+                <div class="r-mant-tec">Responsable: {{ m.tecnico_obj?.nombre_completo || m.tecnico || '—' }}</div>
+                <div class="r-mant-tec">Equipo: {{ teamSize(m) }} {{ teamSize(m) === 1 ? 'persona' : 'personas' }}</div>
                 <div class="r-mant-hrs" v-if="m.horas">{{ m.horas }}h</div>
               </div>
 
@@ -325,7 +328,9 @@
                 <div class="r-meta-cell" v-if="m.hora"><span class="r-meta-k">Hora</span><span class="r-meta-v">{{ m.hora }}</span></div>
                 <div class="r-meta-cell"><span class="r-meta-k">Tipo</span><span class="r-meta-v capitalize">{{ MANTENIMIENTO_TIPOS[m.tipo] || m.tipo }}</span></div>
                 <div class="r-meta-cell" v-if="m.horas"><span class="r-meta-k">Duración</span><span class="r-meta-v">{{ m.horas }} hrs</span></div>
-                <div class="r-meta-cell" v-if="m.personal"><span class="r-meta-k">Personal</span><span class="r-meta-v">{{ m.personal }}</span></div>
+                <div class="r-meta-cell"><span class="r-meta-k">Responsable del equipo</span><span class="r-meta-v">{{ m.tecnico_obj?.nombre_completo || m.tecnico || '—' }}</span></div>
+                <div class="r-meta-cell" v-if="m.personal"><span class="r-meta-k">Personal adicional en sitio</span><span class="r-meta-v">{{ m.personal }}</span></div>
+                <div class="r-meta-cell"><span class="r-meta-k">Tamaño del equipo</span><span class="r-meta-v">{{ teamSize(m) }} {{ teamSize(m) === 1 ? 'persona' : 'personas' }}</span></div>
               </div>
 
               <div class="r-mant-body">
@@ -870,8 +875,20 @@ const tecnicosForEsc    = (id: number) => {
   mantsForEsc(id).forEach((m: Mantenimiento) => {
     const name = m.tecnico_obj?.nombre_completo || m.tecnico
     if (name) set.add(name)
+    extraPersonalNames(m.personal).forEach(n => set.add(n))
   })
   return [...set]
+}
+const extraPersonalNames = (personal?: string | null): string[] => {
+  if (!personal) return []
+  return String(personal)
+    .split(/[,;\n]/)
+    .map(s => s.trim())
+    .filter(Boolean)
+}
+const teamSize = (m: Mantenimiento): number => {
+  const lead = (m.tecnico_obj?.nombre_completo || m.tecnico) ? 1 : 0
+  return lead + extraPersonalNames(m.personal).length
 }
 const tiposRealizados = (id: number) => {
   const tipos = [...new Set(mantsForEsc(id).map((m: Mantenimiento) => MANTENIMIENTO_TIPOS[m.tipo] || m.tipo))]
