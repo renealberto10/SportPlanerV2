@@ -173,6 +173,11 @@
             <label class="label">Horas Trabajadas</label>
             <input type="number" v-model="form.horas" class="input" min="0" step="0.5" />
           </div>
+          <div>
+            <label class="label">Número de Visitas</label>
+            <input type="number" v-model.number="form.visitas" class="input" min="1" step="1" placeholder="1" />
+            <p class="text-xs text-slate-500 mt-1">Si este registro agrupa varias visitas en un solo reporte, indica el total.</p>
+          </div>
         </div>
         <div>
           <label class="label">Personal Adicional en Sitio</label>
@@ -397,7 +402,7 @@ async function deleteFoto(path: string) {
 const emptyForm = (): Partial<Mantenimiento> => ({
   escenario_id: undefined, tecnico_id: null, fecha: today(), hora: '08:00',
   tecnico: '', tipo: 'preventivo', actividades: '', observaciones: '',
-  estado: 'completado', horas: 0, personal: '',
+  estado: 'completado', horas: 0, visitas: 1, personal: '',
 })
 const form = ref(emptyForm())
 

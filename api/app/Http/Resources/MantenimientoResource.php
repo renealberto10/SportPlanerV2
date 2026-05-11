@@ -20,6 +20,7 @@ class MantenimientoResource extends JsonResource {
             'observaciones'=> $this->observaciones,
             'estado'       => $this->estado,
             'horas'        => $this->horas,
+            'visitas'      => (int) ($this->visitas ?? 1),
             'personal'     => $this->personal,
             'fotos'        => collect($this->fotos ?? [])->map(function ($f) {
                 if (is_string($f)) {

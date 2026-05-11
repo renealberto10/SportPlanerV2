@@ -50,6 +50,7 @@ class MantenimientoController extends Controller
             'observaciones' => 'nullable|string',
             'estado' => 'required|in:pendiente,en_proceso,completado',
             'horas' => 'nullable|numeric|min:0',
+            'visitas' => 'nullable|integer|min:1|max:999',
             'personal' => 'nullable|string',
         ]);
         $mant = Mantenimiento::create($data);
@@ -76,6 +77,7 @@ class MantenimientoController extends Controller
             'observaciones' => 'nullable|string',
             'estado' => 'sometimes|required|in:pendiente,en_proceso,completado',
             'horas' => 'nullable|numeric|min:0',
+            'visitas' => 'nullable|integer|min:1|max:999',
             'personal' => 'nullable|string',
         ]);
         $mantenimiento->update($data);

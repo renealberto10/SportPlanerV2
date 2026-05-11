@@ -319,6 +319,7 @@
                 <span :class="estadoBadge(m.estado)">{{ m.estado }}</span>
                 <div class="r-mant-tec">Responsable: {{ m.tecnico_obj?.nombre_completo || m.tecnico || '—' }}</div>
                 <div class="r-mant-tec">Equipo: {{ teamSize(m) }} {{ teamSize(m) === 1 ? 'persona' : 'personas' }}</div>
+                <div class="r-mant-tec" v-if="(m.visitas || 1) > 1">Visitas: {{ m.visitas }}</div>
                 <div class="r-mant-hrs" v-if="m.horas">{{ m.horas }}h</div>
               </div>
 
@@ -328,6 +329,7 @@
                 <div class="r-meta-cell" v-if="m.hora"><span class="r-meta-k">Hora</span><span class="r-meta-v">{{ m.hora }}</span></div>
                 <div class="r-meta-cell"><span class="r-meta-k">Tipo</span><span class="r-meta-v capitalize">{{ MANTENIMIENTO_TIPOS[m.tipo] || m.tipo }}</span></div>
                 <div class="r-meta-cell" v-if="m.horas"><span class="r-meta-k">Duración</span><span class="r-meta-v">{{ m.horas }} hrs</span></div>
+                <div class="r-meta-cell" v-if="(m.visitas || 1) > 1"><span class="r-meta-k">Visitas realizadas</span><span class="r-meta-v">{{ m.visitas }}</span></div>
                 <div class="r-meta-cell"><span class="r-meta-k">Responsable del equipo</span><span class="r-meta-v">{{ m.tecnico_obj?.nombre_completo || m.tecnico || '—' }}</span></div>
                 <div class="r-meta-cell" v-if="m.personal"><span class="r-meta-k">Personal adicional en sitio</span><span class="r-meta-v">{{ m.personal }}</span></div>
                 <div class="r-meta-cell"><span class="r-meta-k">Tamaño del equipo</span><span class="r-meta-v">{{ teamSize(m) }} {{ teamSize(m) === 1 ? 'persona' : 'personas' }}</span></div>

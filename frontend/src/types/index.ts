@@ -66,6 +66,7 @@ export interface Mantenimiento {
   observaciones: string | null
   estado: 'pendiente' | 'en_proceso' | 'completado'
   horas: number | null
+  visitas: number | null
   personal: string | null
   fotos: MantenimientoFoto[]
   created_at: string

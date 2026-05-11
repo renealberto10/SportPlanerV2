@@ -192,6 +192,11 @@
           </div>
         </div>
         <div>
+          <label class="label">Número de visitas</label>
+          <input type="number" v-model.number="form.visitas" class="input" min="1" step="1" placeholder="1" />
+          <p class="text-xs text-slate-500 mt-1">Si este registro agrupa varias visitas en un solo reporte, indica el total.</p>
+        </div>
+        <div>
           <label class="label">Personal adicional en sitio</label>
           <input v-model="form.personal" class="input" placeholder="Nombres separados por coma" />
         </div>
@@ -248,6 +253,7 @@ const form = ref({
   observaciones:'',
   estado:       'completado',
   horas:        0,
+  visitas:      1,
   personal:     '',
 })
 

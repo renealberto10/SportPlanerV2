@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Mantenimiento extends Model {
     protected $fillable = [
         'escenario_id', 'tecnico_id', 'fecha', 'hora', 'tecnico', 'tipo',
-        'actividades', 'observaciones', 'estado', 'horas', 'personal', 'fotos',
+        'actividades', 'observaciones', 'estado', 'horas', 'visitas', 'personal', 'fotos',
     ];
 
     protected $casts = [
