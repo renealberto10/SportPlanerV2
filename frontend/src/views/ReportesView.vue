@@ -8,6 +8,7 @@
       </div>
       <div v-if="reportData" class="flex gap-2">
         <button class="btn btn-outline" @click="reportData = null">✕ Cerrar</button>
+        <button class="btn btn-outline" :disabled="generatingDocx" @click="printDocx">{{ generatingDocx ? "Generando Word..." : "Descargar Word" }}</button>
         <button class="btn btn-success" :disabled="generatingPdf" @click="printDoc">{{ generatingPdf ? "Generando PDF..." : "Descargar PDF" }}</button>
       </div>
     </div>
@@ -548,6 +549,7 @@
 
       <div class="text-center no-print mt-6 pb-6">
         <button class="btn btn-outline" @click="reportData = null">← Volver</button>
+        <button class="btn btn-outline ml-2" :disabled="generatingDocx" @click="printDocx">{{ generatingDocx ? "Generando Word..." : "Descargar Word" }}</button>
         <button class="btn btn-success ml-2" :disabled="generatingPdf" @click="printDoc">{{ generatingPdf ? "Generando PDF..." : "Descargar PDF" }}</button>
       </div>
     </div>
@@ -716,6 +718,7 @@
 
       <div class="text-center no-print mt-6 pb-6">
         <button class="btn btn-outline" @click="reportData = null">← Volver</button>
+        <button class="btn btn-outline ml-2" :disabled="generatingDocx" @click="printDocx">{{ generatingDocx ? "Generando Word..." : "Descargar Word" }}</button>
         <button class="btn btn-success ml-2" :disabled="generatingPdf" @click="printDoc">{{ generatingPdf ? "Generando PDF..." : "Descargar PDF" }}</button>
       </div>
     </div>
@@ -726,6 +729,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 // @ts-ignore — html2pdf.js no provee tipos oficiales
 import html2pdf from 'html2pdf.js'
+// @ts-ignore — html-docx-js no provee tipos oficiales
+import htmlDocx from 'html-docx-js/dist/html-docx'
 import { dashboardApi, escenarioApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useApiError } from '@/composables/useApiError'
@@ -752,6 +757,7 @@ const mesNombre = (m: number) => MESES[m - 1] || ''
 
 // ── PDF generation (html2pdf.js) ──────────────────────────
 const generatingPdf = ref(false)
+const generatingDocx = ref(false)
 const printDoc = async () => {
   const original = document.getElementById('reporte-doc')
   if (!original) { toast.error('No se encontró el reporte'); return }
@@ -855,6 +861,110 @@ const printDoc = async () => {
   } finally {
     if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper)
     generatingPdf.value = false
+  }
+}
+
+// ── Word generation (html-docx-js) ────────────────────────
+const printDocx = async () => {
+  const original = document.getElementById('reporte-doc')
+  if (!original) { toast.error('No se encontró el reporte'); return }
+  generatingDocx.value = true
+
+  try {
+    const clone = original.cloneNode(true) as HTMLElement
+    clone.classList.add('pdf-mode')
+
+    // Remover botones / controles del clon
+    clone.querySelectorAll('button, .no-print').forEach(el => el.remove())
+
+    // Inline-data las imágenes para que viajen dentro del .docx
+    const imgs = Array.from(clone.querySelectorAll('img')) as HTMLImageElement[]
+    await Promise.all(imgs.map(async (img) => {
+      try {
+        if (img.src.startsWith('data:')) return
+        const res = await fetch(img.src, { credentials: 'omit', mode: 'cors' })
+        if (!res.ok) throw new Error(String(res.status))
+        const blob = await res.blob()
+        const dataUrl: string = await new Promise((resolve, reject) => {
+          const fr = new FileReader()
+          fr.onload = () => resolve(fr.result as string)
+          fr.onerror = () => reject(fr.error)
+          fr.readAsDataURL(blob)
+        })
+        img.src = dataUrl
+        img.removeAttribute('srcset')
+      } catch (err) {
+        console.warn('[DOCX] no se pudo precargar imagen', img.src, err)
+      }
+    }))
+
+    // Recolectar las hojas de estilo de la página (las accesibles)
+    let cssText = ''
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        const rules = (sheet as CSSStyleSheet).cssRules
+        if (!rules) continue
+        for (const rule of Array.from(rules)) cssText += rule.cssText + '\n'
+      } catch { /* hojas externas no accesibles */ }
+    }
+
+    // Estilos extra para asegurar legibilidad en Word
+    const wordCss = `
+      body { font-family: 'Calibri', Arial, sans-serif; color: #1f2937; }
+      img { max-width: 100%; height: auto; }
+      table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+      table, th, td { border: 1px solid #d1d5db; }
+      th, td { padding: 6px 8px; font-size: 11px; vertical-align: top; }
+      th { background: #f3f4f6; text-align: left; }
+      h1, h2, h3, h4 { color: #0f172a; margin: 12px 0 6px; }
+      .r-section { margin: 14px 0; page-break-inside: avoid; }
+      .r-section-title { font-size: 14px; font-weight: bold; border-bottom: 2px solid #3b82f6; padding-bottom: 4px; margin-bottom: 8px; }
+      .r-kpi-grid { display: table; width: 100%; }
+      .r-kpi { display: inline-block; width: 32%; padding: 8px; margin: 4px 0; border: 1px solid #e5e7eb; border-radius: 6px; vertical-align: top; }
+      .r-kpi-num { font-size: 20px; font-weight: bold; }
+      .r-kpi-lbl { font-size: 10px; color: #6b7280; }
+      .r-mant-card { border: 1px solid #e5e7eb; padding: 10px; margin: 8px 0; page-break-inside: avoid; }
+      .r-foto-img { max-width: 280px; max-height: 200px; }
+      .r-fotos-pair { display: table; width: 100%; }
+      .r-fotos-side { display: table-cell; width: 50%; padding: 4px; vertical-align: top; }
+      .page-break-before { page-break-before: always; }
+    `
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte</title>` +
+      `<style>${cssText}\n${wordCss}</style></head>` +
+      `<body>${clone.outerHTML}</body></html>`
+
+    const blob: Blob = htmlDocx.asBlob(html, {
+      orientation: 'portrait',
+      margins: { top: 720, right: 720, bottom: 720, left: 720 },
+    })
+
+    const periodo  = `${mesNombre(reportData.value?.mes || 0)}_${reportData.value?.anio || ''}`
+    const tipo     = reportData.value?.tipoReporte === 'eventos' ? 'Eventos' : 'Mantenimiento'
+    const sanitize = (s: string) => s
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9\s_-]/g, '')
+      .trim()
+      .replace(/\s+/g, '_')
+    const escs = (reportData.value?.escenarios || []) as Escenario[]
+    const escenarioPart = escs.length === 1
+      ? `_${sanitize(escs[0].nombre)}`
+      : (escs.length > 1 ? `_${escs.length}_escenarios` : '')
+    const filename = `Reporte_${tipo}${escenarioPart}_${periodo}.docx`.replace(/\s+/g, '_')
+
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } catch (e) {
+    console.error(e)
+    toast.error('Error generando el Word')
+  } finally {
+    generatingDocx.value = false
   }
 }
 
