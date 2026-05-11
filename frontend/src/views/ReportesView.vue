@@ -729,26 +729,6 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 // @ts-ignore — html2pdf.js no provee tipos oficiales
 import html2pdf from 'html2pdf.js'
-
-// html-docx-js se carga en runtime desde CDN porque usa `with` statements
-// (incompatible con rolldown/Vite en producción).
-let htmlDocxPromise: Promise<any> | null = null
-const loadHtmlDocx = (): Promise<any> => {
-  if ((window as any).htmlDocx) return Promise.resolve((window as any).htmlDocx)
-  if (htmlDocxPromise) return htmlDocxPromise
-  htmlDocxPromise = new Promise((resolve, reject) => {
-    const s = document.createElement('script')
-    s.src = 'https://unpkg.com/html-docx-js/dist/html-docx.js'
-    s.async = true
-    s.onload = () => {
-      const lib = (window as any).htmlDocx
-      if (lib) resolve(lib); else reject(new Error('html-docx-js no se pudo cargar'))
-    }
-    s.onerror = () => reject(new Error('No se pudo descargar html-docx-js'))
-    document.head.appendChild(s)
-  })
-  return htmlDocxPromise
-}
 import { dashboardApi, escenarioApi } from '@/api'
 import { useToastStore } from '@/stores/toast'
 import { useApiError } from '@/composables/useApiError'
@@ -882,7 +862,9 @@ const printDoc = async () => {
   }
 }
 
-// ── Word generation (html-docx-js) ────────────────────────
+// ── Word generation (MS Word HTML format) ────────────────
+// Usamos el formato "Word HTML" (.doc) que es nativo de MS Word desde
+// Office 2003 y respeta prácticamente todo el CSS de la página.
 const printDocx = async () => {
   const original = document.getElementById('reporte-doc')
   if (!original) { toast.error('No se encontró el reporte'); return }
@@ -895,7 +877,7 @@ const printDocx = async () => {
     // Remover botones / controles del clon
     clone.querySelectorAll('button, .no-print').forEach(el => el.remove())
 
-    // Inline-data las imágenes para que viajen dentro del .docx
+    // Inline-data las imágenes para que viajen dentro del documento
     const imgs = Array.from(clone.querySelectorAll('img')) as HTMLImageElement[]
     await Promise.all(imgs.map(async (img) => {
       try {
@@ -912,11 +894,11 @@ const printDocx = async () => {
         img.src = dataUrl
         img.removeAttribute('srcset')
       } catch (err) {
-        console.warn('[DOCX] no se pudo precargar imagen', img.src, err)
+        console.warn('[DOC] no se pudo precargar imagen', img.src, err)
       }
     }))
 
-    // Recolectar las hojas de estilo de la página (las accesibles)
+    // Recolectar todas las hojas de estilo accesibles de la página
     let cssText = ''
     for (const sheet of Array.from(document.styleSheets)) {
       try {
@@ -926,36 +908,39 @@ const printDocx = async () => {
       } catch { /* hojas externas no accesibles */ }
     }
 
-    // Estilos extra para asegurar legibilidad en Word
+    // Estilos extra orientados a Word (page setup, fuentes, tablas)
     const wordCss = `
-      body { font-family: 'Calibri', Arial, sans-serif; color: #1f2937; }
+      @page WordSection1 { size: 21cm 29.7cm; margin: 1.5cm 1.5cm 1.5cm 1.5cm; mso-page-orientation: portrait; }
+      div.WordSection1 { page: WordSection1; }
+      body { font-family: 'Calibri', Arial, sans-serif; color: #1f2937; font-size: 11pt; }
       img { max-width: 100%; height: auto; }
-      table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-      table, th, td { border: 1px solid #d1d5db; }
-      th, td { padding: 6px 8px; font-size: 11px; vertical-align: top; }
-      th { background: #f3f4f6; text-align: left; }
-      h1, h2, h3, h4 { color: #0f172a; margin: 12px 0 6px; }
-      .r-section { margin: 14px 0; page-break-inside: avoid; }
-      .r-section-title { font-size: 14px; font-weight: bold; border-bottom: 2px solid #3b82f6; padding-bottom: 4px; margin-bottom: 8px; }
-      .r-kpi-grid { display: table; width: 100%; }
-      .r-kpi { display: inline-block; width: 32%; padding: 8px; margin: 4px 0; border: 1px solid #e5e7eb; border-radius: 6px; vertical-align: top; }
-      .r-kpi-num { font-size: 20px; font-weight: bold; }
-      .r-kpi-lbl { font-size: 10px; color: #6b7280; }
-      .r-mant-card { border: 1px solid #e5e7eb; padding: 10px; margin: 8px 0; page-break-inside: avoid; }
-      .r-foto-img { max-width: 280px; max-height: 200px; }
-      .r-fotos-pair { display: table; width: 100%; }
-      .r-fotos-side { display: table-cell; width: 50%; padding: 4px; vertical-align: top; }
+      table { border-collapse: collapse; }
+      .r-section { page-break-inside: avoid; margin: 14px 0; }
+      .r-mant-card, .r-ev-card, .r-foto-block { page-break-inside: avoid; }
       .page-break-before { page-break-before: always; }
     `
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte</title>` +
-      `<style>${cssText}\n${wordCss}</style></head>` +
-      `<body>${clone.outerHTML}</body></html>`
+    // MIME-multipart MHTML-style header lo entiende Word, pero un HTML
+    // plano con namespaces de Office también funciona y es más simple.
+    const html =
+      `<html xmlns:o="urn:schemas-microsoft-com:office:office" ` +
+      `xmlns:w="urn:schemas-microsoft-com:office:word" ` +
+      `xmlns="http://www.w3.org/TR/REC-html40">` +
+      `<head><meta charset="utf-8">` +
+      `<meta http-equiv="Content-Type" content="text/html; charset=utf-8">` +
+      `<title>Reporte</title>` +
+      `<!--[if gte mso 9]><xml>` +
+      `<w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom>` +
+      `<w:DoNotOptimizeForBrowser/></w:WordDocument>` +
+      `</xml><![endif]-->` +
+      `<style>${cssText}\n${wordCss}</style>` +
+      `</head><body><div class="WordSection1">${clone.outerHTML}</div></body></html>`
 
-    const blob: Blob = (await loadHtmlDocx()).asBlob(html, {
-      orientation: 'portrait',
-      margins: { top: 720, right: 720, bottom: 720, left: 720 },
-    })
+    // Prefijo BOM + MIME para que Word lo abra como documento HTML.
+    const blob = new Blob(
+      ['\ufeff', html],
+      { type: 'application/msword;charset=utf-8' },
+    )
 
     const periodo  = `${mesNombre(reportData.value?.mes || 0)}_${reportData.value?.anio || ''}`
     const tipo     = reportData.value?.tipoReporte === 'eventos' ? 'Eventos' : 'Mantenimiento'
@@ -968,7 +953,7 @@ const printDocx = async () => {
     const escenarioPart = escs.length === 1
       ? `_${sanitize(escs[0].nombre)}`
       : (escs.length > 1 ? `_${escs.length}_escenarios` : '')
-    const filename = `Reporte_${tipo}${escenarioPart}_${periodo}.docx`.replace(/\s+/g, '_')
+    const filename = `Reporte_${tipo}${escenarioPart}_${periodo}.doc`.replace(/\s+/g, '_')
 
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
