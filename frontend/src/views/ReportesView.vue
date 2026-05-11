@@ -134,7 +134,7 @@
             <div class="r-section-title">Resumen Ejecutivo</div>
             <div class="r-kpi-grid">
               <div class="r-kpi r-kpi-blue">
-                <div class="r-kpi-num">{{ mantsForEsc(esc.id).length }}</div>
+                <div class="r-kpi-num">{{ visitasForEsc(esc.id) }}</div>
                 <div class="r-kpi-lbl">Visitas realizadas</div>
               </div>
               <div class="r-kpi r-kpi-indigo">
@@ -150,7 +150,7 @@
                 <div class="r-kpi-lbl">Piezas reemplazadas</div>
               </div>
               <div class="r-kpi r-kpi-cyan">
-                <div class="r-kpi-num">{{ mantsForEsc(esc.id).filter(m => m.estado === 'completado').length }}</div>
+                <div class="r-kpi-num">{{ visitasCompletadasForEsc(esc.id) }}</div>
                 <div class="r-kpi-lbl">Visitas completadas</div>
               </div>
               <div class="r-kpi r-kpi-rose">
@@ -269,6 +269,7 @@
                   <th>Tipo</th>
                   <th>Responsable</th>
                   <th class="text-center">Equipo</th>
+                  <th class="text-center">Visitas</th>
                   <th class="text-center">Hrs</th>
                   <th>Estado</th>
                   <th class="text-center">Evid.</th>
@@ -281,17 +282,19 @@
                   <td><span :class="tipoBadge(m.tipo)">{{ MANTENIMIENTO_TIPOS[m.tipo] || m.tipo }}</span></td>
                   <td class="text-xs">{{ m.tecnico_obj?.nombre_completo || m.tecnico || '—' }}</td>
                   <td class="text-center text-xs font-semibold">{{ teamSize(m) }}</td>
+                  <td class="text-center font-semibold">{{ m.visitas || 1 }}</td>
                   <td class="text-center font-semibold">{{ m.horas || 0 }}</td>
                   <td><span :class="estadoBadge(m.estado)">{{ m.estado }}</span></td>
                   <td class="text-center text-xs">{{ getFotos(m, 'antes').length + getFotos(m, 'despues').length }}</td>
                 </tr>
                 <tr v-if="!mantsForEsc(esc.id).length">
-                  <td colspan="8" class="text-center text-slate-400 italic py-4">Sin visitas registradas en el período.</td>
+                  <td colspan="9" class="text-center text-slate-400 italic py-4">Sin visitas registradas en el período.</td>
                 </tr>
               </tbody>
               <tfoot v-if="mantsForEsc(esc.id).length">
                 <tr class="r-tfoot">
                   <td colspan="5" class="text-right font-bold">TOTALES</td>
+                  <td class="text-center font-bold">{{ visitasForEsc(esc.id) }}</td>
                   <td class="text-center font-bold">{{ horasForEsc(esc.id) }}</td>
                   <td></td>
                   <td class="text-center font-bold">{{ totalFotosForEsc(esc.id) }}</td>
@@ -436,7 +439,7 @@
               <tbody>
                 <tr>
                   <td class="r-td-label">Visitas de mantenimiento realizadas</td>
-                  <td class="font-bold text-center">{{ mantsForEsc(esc.id).length }}</td>
+                  <td class="font-bold text-center">{{ visitasForEsc(esc.id) }}</td>
                   <td class="r-td-status">Completado</td>
                 </tr>
                 <tr>
@@ -865,6 +868,12 @@ const hasType           = (id: number, tipo: string) =>
   mantsForEsc(id).some((m: Mantenimiento) => m.tipo === tipo)
 const horasForEsc       = (id: number) =>
   mantsForEsc(id).reduce((s: number, m: Mantenimiento) => s + (m.horas || 0), 0)
+const visitasForEsc     = (id: number) =>
+  mantsForEsc(id).reduce((s: number, m: Mantenimiento) => s + (m.visitas || 1), 0)
+const visitasCompletadasForEsc = (id: number) =>
+  mantsForEsc(id)
+    .filter((m: Mantenimiento) => m.estado === 'completado')
+    .reduce((s: number, m: Mantenimiento) => s + (m.visitas || 1), 0)
 const countTipo         = (id: number, tipo: string) =>
   mantsForEsc(id).filter((m: Mantenimiento) => m.tipo === tipo).length
 const pctTipo           = (id: number, tipo: string) => {
