@@ -306,14 +306,15 @@ async function save() {
   if (!form.value.actividades?.trim()) { toast.add('Describe las actividades realizadas', 'error'); return }
   saving.value = true
   try {
-    const { data: mant } = await mantenimientoApi.create(form.value as never)
+    const { data: mantResp } = await mantenimientoApi.create(form.value as never)
+    const mantId: number = (mantResp as any).data?.id ?? (mantResp as any).id
 
     // Upload photos (antes y después)
     for (const f of fotosAntes.value) {
-      await mantenimientoApi.uploadFoto(mant.id, f.file, 'antes')
+      await mantenimientoApi.uploadFoto(mantId, f.file, 'antes')
     }
     for (const f of fotosDespues.value) {
-      await mantenimientoApi.uploadFoto(mant.id, f.file, 'despues')
+      await mantenimientoApi.uploadFoto(mantId, f.file, 'despues')
     }
 
     // Save piezas
@@ -321,7 +322,7 @@ async function save() {
       if (!pz.descripcion_pieza.trim()) continue
       await cambioPiezaApi.create({
         escenario_id:     form.value.escenario_id!,
-        mantenimiento_id: mant.id,
+        mantenimiento_id: mantId,
         evento_id:        null,
         equipo_id:        pz.equipo_id,
         descripcion_pieza: pz.descripcion_pieza,
