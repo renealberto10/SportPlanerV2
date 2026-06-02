@@ -862,9 +862,6 @@ const printDoc = async () => {
   }
 }
 
-// ── Word generation (MS Word HTML format) ────────────────
-// Usamos el formato "Word HTML" (.doc) que es nativo de MS Word desde
-// Office 2003 y respeta prácticamente todo el CSS de la página.
 const printDocx = async () => {
   const original = document.getElementById('reporte-doc')
   if (!original) { toast.error('No se encontró el reporte'); return }
@@ -873,6 +870,7 @@ const printDocx = async () => {
   try {
     const clone = original.cloneNode(true) as HTMLElement
     clone.classList.add('pdf-mode')
+    clone.classList.add('word-mode')
 
     // Remover botones / controles del clon
     clone.querySelectorAll('button, .no-print').forEach(el => el.remove())
@@ -893,35 +891,106 @@ const printDocx = async () => {
         })
         img.src = dataUrl
         img.removeAttribute('srcset')
+        if (typeof img.decode === 'function') {
+          try { await img.decode() } catch { /* ignore */ }
+        }
       } catch (err) {
         console.warn('[DOC] no se pudo precargar imagen', img.src, err)
       }
     }))
 
-    // Recolectar todas las hojas de estilo accesibles de la página
-    let cssText = ''
-    for (const sheet of Array.from(document.styleSheets)) {
-      try {
-        const rules = (sheet as CSSStyleSheet).cssRules
-        if (!rules) continue
-        for (const rule of Array.from(rules)) cssText += rule.cssText + '\n'
-      } catch { /* hojas externas no accesibles */ }
+    // Incrustar estilo computado por elemento para que Word conserve
+    // el diseño visual (incluyendo colores, bordes y espaciados) de forma editable.
+    const inlineComputedStyles = (root: HTMLElement) => {
+      const nodes = [root, ...Array.from(root.querySelectorAll('*'))] as HTMLElement[]
+      for (const node of nodes) {
+        const cs = window.getComputedStyle(node)
+        let css = node.getAttribute('style') || ''
+        for (const prop of Array.from(cs)) {
+          if (prop.startsWith('animation') || prop.startsWith('transition')) continue
+          if (prop === 'cursor' || prop === 'caret-color' || prop === 'pointer-events') continue
+          const value = cs.getPropertyValue(prop)
+          if (!value) continue
+          css += `${prop}:${value};`
+        }
+        node.setAttribute('style', css)
+      }
     }
 
-    // Estilos extra orientados a Word (page setup, fuentes, tablas)
+    inlineComputedStyles(clone)
+
+    // CSS específico para Word: mantiene diseño y reemplaza layouts que Word
+    // no interpreta bien (grid/flex) por estructura de tabla editable.
     const wordCss = `
-      @page WordSection1 { size: 21cm 29.7cm; margin: 1.5cm 1.5cm 1.5cm 1.5cm; mso-page-orientation: portrait; }
+      @page WordSection1 { size: 21cm 29.7cm; margin: 1.2cm 1.4cm 1.2cm 1.4cm; mso-page-orientation: portrait; }
       div.WordSection1 { page: WordSection1; }
-      body { font-family: 'Calibri', Arial, sans-serif; color: #1f2937; font-size: 11pt; }
-      img { max-width: 100%; height: auto; }
+      body { font-family: Calibri, Arial, sans-serif; color: #1f2937; font-size: 11pt; }
+      img { max-width: 100% !important; height: auto !important; }
       table { border-collapse: collapse; }
-      .r-section { page-break-inside: avoid; margin: 14px 0; }
-      .r-mant-card, .r-ev-card, .r-foto-block { page-break-inside: avoid; }
-      .page-break-before { page-break-before: always; }
+      .word-mode { background: #fff !important; }
+      .word-mode .no-print, .word-mode button, .word-mode .btn { display: none !important; }
+      .word-mode .report-page {
+        max-width: none !important; width: 100% !important;
+        border: 1px solid #e2e8f0 !important; border-radius: 0 !important;
+        box-shadow: none !important; padding: 16px !important; margin: 0 0 16px 0 !important;
+        page-break-after: always; break-after: page;
+      }
+      .word-mode .report-page:last-child { page-break-after: auto; break-after: auto; }
+      .word-mode .r-header-top,
+      .word-mode .r-header-fields,
+      .word-mode .r-meta-row,
+      .word-mode .r-fotos-pair,
+      .word-mode .r-signatures,
+      .word-mode .r-ev-meta {
+        display: table !important; width: 100% !important; table-layout: fixed !important;
+      }
+      .word-mode .r-header-top > *,
+      .word-mode .r-header-fields > *,
+      .word-mode .r-meta-row > *,
+      .word-mode .r-fotos-pair > *,
+      .word-mode .r-signatures > *,
+      .word-mode .r-ev-meta > * {
+        display: table-cell !important; vertical-align: top !important;
+      }
+      .word-mode .r-kpi-grid { display: table !important; width: 100% !important; table-layout: fixed !important; }
+      .word-mode .r-kpi-grid > * { display: table-cell !important; padding-right: 8px !important; }
+      .word-mode .r-kpi-grid > *:last-child { padding-right: 0 !important; }
+      .word-mode .r-fotos-grid,
+      .word-mode .r-fotos-grid-2 {
+        display: table !important; width: 100% !important; table-layout: fixed !important;
+      }
+      .word-mode .r-fotos-grid > *,
+      .word-mode .r-fotos-grid-2 > * {
+        display: table-cell !important; padding-right: 6px !important;
+      }
+      .word-mode .r-fotos-grid > *:last-child,
+      .word-mode .r-fotos-grid-2 > *:last-child { padding-right: 0 !important; }
+      .word-mode .r-mant-card,
+      .word-mode .r-ev-card,
+      .word-mode .r-foto-block,
+      .word-mode .r-section,
+      .word-mode table,
+      .word-mode tr { page-break-inside: avoid; break-inside: avoid; }
+      .word-mode .r-table { border: 1px solid #1e3a5f !important; }
+      .word-mode .r-table th,
+      .word-mode .r-table td { border: 1px solid #cbd5e1 !important; }
+      .word-mode .r-table th { background: #1e3a5f !important; color: #fff !important; }
+      .word-mode .r-section-title {
+        border-left: 4px solid #1e3a5f !important;
+        background: #f8fafc !important;
+        padding: 4px 0 4px 10px !important;
+      }
+      .word-mode .badge {
+        border: 1px solid #94a3b8 !important;
+        padding: 1px 6px !important;
+        border-radius: 9999px !important;
+      }
+      .word-mode .pdf-mode .report-page,
+      .word-mode .report-page {
+        border: 1px solid #e2e8f0 !important;
+      }
     `
 
-    // MIME-multipart MHTML-style header lo entiende Word, pero un HTML
-    // plano con namespaces de Office también funciona y es más simple.
     const html =
       `<html xmlns:o="urn:schemas-microsoft-com:office:office" ` +
       `xmlns:w="urn:schemas-microsoft-com:office:word" ` +
@@ -933,14 +1002,10 @@ const printDocx = async () => {
       `<w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom>` +
       `<w:DoNotOptimizeForBrowser/></w:WordDocument>` +
       `</xml><![endif]-->` +
-      `<style>${cssText}\n${wordCss}</style>` +
+      `<style>${wordCss}</style>` +
       `</head><body><div class="WordSection1">${clone.outerHTML}</div></body></html>`
 
-    // Prefijo BOM + MIME para que Word lo abra como documento HTML.
-    const blob = new Blob(
-      ['\ufeff', html],
-      { type: 'application/msword;charset=utf-8' },
-    )
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' })
 
     const periodo  = `${mesNombre(reportData.value?.mes || 0)}_${reportData.value?.anio || ''}`
     const tipo     = reportData.value?.tipoReporte === 'eventos' ? 'Eventos' : 'Mantenimiento'
