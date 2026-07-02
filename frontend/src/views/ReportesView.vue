@@ -957,14 +957,17 @@ const printDoc = async () => {
       .set({
         margin: [10, 10, 12, 10], // mm: top, right, bottom, left
         filename,
-        image:       { type: 'jpeg', quality: 0.92 },
+        image:       { type: 'jpeg', quality: 0.95 },
         html2canvas: {
           scale: safeScale,
           useCORS: true,
-          allowTaint: true,
           logging: false,
           backgroundColor: '#ffffff',
-          windowWidth: 1180,
+          // El wrapper del clon mide 900px de ancho. Alinear windowWidth
+          // asegura que html2canvas renderice el layout tal como se ve
+          // en el preview (evita reflow por breakpoints responsivos).
+          windowWidth: 900,
+          letterRendering: true,
           // Ignorar cualquier control / botón
           ignoreElements: (node: Element) =>
             node.classList?.contains('no-print') ||
@@ -1911,8 +1914,10 @@ onMounted(async () => {
 
 /* ════════════════════════════════════════════════════════════
    PDF MODE — aplicado por html2pdf.js en el clon (onclone).
-   Refuerza bordes, oscurece separadores y oculta cualquier
-   control para que el PDF se vea como un documento impreso.
+   Solo oculta controles y quita el marco de la vista previa
+   (sombra, borde de tarjeta, padding externo, max-width). Los
+   estilos visuales se mantienen idénticos al preview de pantalla
+   para que el PDF luzca igual que la web.
    ════════════════════════════════════════════════════════════ */
 .pdf-mode {
   background: #ffffff !important;
@@ -1921,7 +1926,8 @@ onMounted(async () => {
 .pdf-mode button,
 .pdf-mode .btn { display: none !important; }
 
-/* Quitar sombras / radios suaves que html2canvas renderiza feo */
+/* Quitar sombras / radios / padding externo del contenedor
+   (solo son útiles para la vista previa en pantalla). */
 .pdf-mode .report-page {
   box-shadow: none !important;
   border: none !important;
@@ -1930,124 +1936,5 @@ onMounted(async () => {
   margin: 0 0 8mm 0 !important;
   max-width: none !important;
   width: 100% !important;
-}
-
-/* Eventos en PDF: bordes definidos */
-.pdf-mode .r-ev-card {
-  border: 1px solid #475569 !important;
-  border-radius: 4px !important;
-  margin-bottom: 8px !important;
-}
-.pdf-mode .r-ev-head {
-  background: #1e3a5f !important;
-  color: #ffffff !important;
-}
-.pdf-mode .r-ev-meta {
-  background: #f1f5f9 !important;
-  border-bottom: 1px solid #94a3b8 !important;
-}
-.pdf-mode .r-ev-meta .r-meta-cell {
-  border-right: 1px solid #cbd5e1 !important;
-}
-.pdf-mode .r-ev-body {
-  border-bottom: 1px solid #cbd5e1 !important;
-}
-
-/* Bordes más oscuros y consistentes */
-.pdf-mode .r-mant-card {
-  border: 1px solid #94a3b8 !important;
-  border-radius: 4px !important;
-  margin-bottom: 10px !important;
-}
-.pdf-mode .r-mant-header {
-  background: #eef2f7 !important;
-  border-bottom: 1px solid #94a3b8 !important;
-}
-.pdf-mode .r-mant-piezas,
-.pdf-mode .r-meta-row,
-.pdf-mode .r-fotos-pair,
-.pdf-mode .r-fotos-grid,
-.pdf-mode .r-fotos-none {
-  border-top: 1px solid #cbd5e1 !important;
-}
-.pdf-mode .r-fotos-side + .r-fotos-side {
-  border-left: 1px solid #cbd5e1 !important;
-}
-.pdf-mode .r-meta-cell {
-  border-right: 1px solid #cbd5e1 !important;
-}
-
-/* Tablas con bordes visibles en TODAS las celdas */
-.pdf-mode .r-table {
-  border: 1px solid #1e3a5f !important;
-}
-.pdf-mode .r-table th {
-  background: #1e3a5f !important;
-  color: #ffffff !important;
-  border: 1px solid #1e3a5f !important;
-}
-.pdf-mode .r-table td {
-  border: 1px solid #cbd5e1 !important;
-  background: #ffffff !important;
-}
-.pdf-mode .r-table tr:nth-child(even) td {
-  background: #f1f5f9 !important;
-}
-.pdf-mode .r-tfoot td {
-  background: #e2e8f0 !important;
-  font-weight: 700 !important;
-}
-
-/* KPI con bordes más definidos */
-.pdf-mode .r-kpi {
-  border-width: 1.5px !important;
-}
-
-/* Header con doble línea para que se vea sólido */
-.pdf-mode .r-header {
-  border-bottom: 3px solid #1e3a5f !important;
-}
-.pdf-mode .r-header-fields {
-  background: #f1f5f9 !important;
-  border: 1px solid #cbd5e1 !important;
-}
-
-/* Distribución por tipo */
-.pdf-mode .r-dist-grid {
-  background: #f8fafc !important;
-  border: 1px solid #cbd5e1 !important;
-}
-.pdf-mode .r-bar-track {
-  background: #cbd5e1 !important;
-}
-
-/* Section title más legible */
-.pdf-mode .r-section-title {
-  border-left: 4px solid #1e3a5f !important;
-  background: #f8fafc;
-  padding: 4px 0 4px 10px;
-}
-
-/* Subsection y separadores */
-.pdf-mode .r-subsection-title {
-  border-bottom: 1px solid #94a3b8 !important;
-}
-
-/* Fotos con borde sutil para que no “floten” */
-.pdf-mode .r-foto-item,
-.pdf-mode .r-foto-img {
-  border: 1px solid #cbd5e1 !important;
-  border-radius: 3px !important;
-}
-
-/* Firmas con líneas oscuras */
-.pdf-mode .r-sig-line {
-  border-top: 2px solid #475569 !important;
-}
-
-/* Footer separador visible */
-.pdf-mode .r-footer {
-  border-top: 1px solid #94a3b8 !important;
-  color: #475569 !important;
 }
 </style>
