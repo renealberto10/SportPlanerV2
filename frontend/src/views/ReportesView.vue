@@ -463,7 +463,7 @@
                   </div>
                   <div v-if="getFotos(m, 'antes').length" class="r-fotos-grid-2">
                     <div v-for="(f, i) in getFotos(m, 'antes')" :key="'a'+i" class="r-foto-item">
-                      <img :src="f.url" class="r-foto-img" />
+                      <img :src="f.thumb_url || f.url" class="r-foto-img" loading="lazy" decoding="async" />
                     </div>
                   </div>
                   <div v-else class="r-fotos-empty">Sin foto del estado inicial</div>
@@ -476,7 +476,7 @@
                   </div>
                   <div v-if="getFotos(m, 'despues').length" class="r-fotos-grid-2">
                     <div v-for="(f, i) in getFotos(m, 'despues')" :key="'d'+i" class="r-foto-item">
-                      <img :src="f.url" class="r-foto-img" />
+                      <img :src="f.thumb_url || f.url" class="r-foto-img" loading="lazy" decoding="async" />
                     </div>
                   </div>
                   <div v-else class="r-fotos-empty">Sin foto del trabajo terminado</div>
@@ -821,7 +821,7 @@
                 <div class="r-ev-fotos-title">Evidencia fotográfica ({{ getEventoFotos(ev).length }})</div>
                 <div class="r-fotos-grid">
                   <div v-for="(f, fi) in getEventoFotos(ev)" :key="fi" class="r-foto-item">
-                    <img :src="f.url" class="r-foto-img" />
+                    <img :src="f.thumb_url || f.url" class="r-foto-img" loading="lazy" decoding="async" />
                   </div>
                 </div>
               </div>
@@ -1228,7 +1228,12 @@ function getFotos(m: Mantenimiento, tipo: 'antes' | 'despues'): MantenimientoFot
     .map((f: any): MantenimientoFoto =>
       typeof f === 'string'
         ? { url: f, path: f, tipo: 'despues' }
-        : { url: f.url, path: f.path, tipo: f.tipo === 'antes' ? 'antes' : 'despues' },
+        : {
+            url: f.url,
+            path: f.path,
+            thumb_url: f.thumb_url,
+            tipo: f.tipo === 'antes' ? 'antes' : 'despues',
+          },
     )
     .filter(f => f.tipo === tipo)
 }
@@ -1236,7 +1241,9 @@ function getFotos(m: Mantenimiento, tipo: 'antes' | 'despues'): MantenimientoFot
 function getEventoFotos(e: Evento): EventoFoto[] {
   const fotos = (e.fotos || []) as any[]
   return fotos.map((f: any): EventoFoto =>
-    typeof f === 'string' ? { url: `/storage/${f}`, path: f } : { url: f.url, path: f.path },
+    typeof f === 'string'
+      ? { url: `/storage/${f}`, path: f }
+      : { url: f.url, path: f.path, thumb_url: f.thumb_url },
   )
 }
 

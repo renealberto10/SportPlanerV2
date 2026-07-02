@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\EventoController;
 use App\Http\Controllers\Api\MantenimientoController;
 use App\Http\Controllers\Api\SolicitudController;
 use App\Http\Controllers\Api\TecnicoController;
+use App\Http\Controllers\Api\ThumbController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +18,9 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1/auth')->group(function () {
     Route::post('/login',  [AuthController::class, 'login']);
 });
+
+// ── Public: image thumbnails (cached on disk) ─────────────
+Route::get('/thumb', [ThumbController::class, 'show']);
 
 // ── Protected ─────────────────────────────────────────────
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {

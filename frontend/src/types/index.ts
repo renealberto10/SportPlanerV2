@@ -44,12 +44,14 @@ export type MantenimientoFotoTipo = 'antes' | 'despues'
 export interface MantenimientoFoto {
   path: string
   url: string
+  thumb_url?: string
   tipo: MantenimientoFotoTipo
 }
 
 export interface EventoFoto {
   path: string
   url: string
+  thumb_url?: string
 }
 
 export interface Mantenimiento {

@@ -24,13 +24,19 @@ class MantenimientoResource extends JsonResource {
             'personal'     => $this->personal,
             'fotos'        => collect($this->fotos ?? [])->map(function ($f) {
                 if (is_string($f)) {
-                    return ['path' => $f, 'tipo' => 'despues', 'url' => asset('storage/' . $f)];
+                    return [
+                        'path'      => $f,
+                        'tipo'      => 'despues',
+                        'url'       => asset('storage/' . $f),
+                        'thumb_url' => url('/api/thumb') . '?w=800&path=' . rawurlencode($f),
+                    ];
                 }
                 $path = $f['path'] ?? '';
                 return [
-                    'path' => $path,
-                    'tipo' => in_array($f['tipo'] ?? null, ['antes', 'despues'], true) ? $f['tipo'] : 'despues',
-                    'url'  => asset('storage/' . $path),
+                    'path'      => $path,
+                    'tipo'      => in_array($f['tipo'] ?? null, ['antes', 'despues'], true) ? $f['tipo'] : 'despues',
+                    'url'       => asset('storage/' . $path),
+                    'thumb_url' => url('/api/thumb') . '?w=800&path=' . rawurlencode($path),
                 ];
             })->values(),
             'created_at'   => $this->created_at,
