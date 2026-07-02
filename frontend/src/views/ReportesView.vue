@@ -1325,148 +1325,140 @@ function buildDefaultCompliance(id: number): ComplianceItem[] {
   const eventos      = eventosForEsc(id)
   const hasEventos   = eventos.length > 0
   const tecnicos     = tecnicosForEsc(id).length
-  const nEventOper   = eventos.length + (hasOper ? countTipo(id, 'operativo') : 0)
+
+  // Helper: elige el estado inicial y el texto correspondiente.
+  //   - Cuando aplica  → texto contractual completo (definido por el cliente).
+  //   - Cuando N/A     → texto conciso que explica por qué no aplica en el período.
+  const row = (
+    label: string,
+    aplica: boolean,
+    obsCumplido: string,
+    obsNA: string,
+    indent = true,
+  ): ComplianceItem => ({
+    type: 'row',
+    indent,
+    label,
+    estado: aplica ? 'Cumplido' : 'N/A',
+    obs: aplica ? obsCumplido : obsNA,
+  })
 
   const items: ComplianceItem[] = []
 
-  items.push({
-    type: 'row',
-    label: 'Limpieza y revisión de bocinas, rejillas protectoras y conectores.',
-    estado: anyMant ? 'Cumplido' : 'N/A',
-    obs: anyMant
-      ? 'Limpieza profunda de bocinas, rejillas protectoras y conectores; verificación de ajuste mecánico y estado general de los transductores del escenario.'
-      : 'Sin visitas registradas en el período; actividad no aplicable.',
-  })
-  items.push({
-    type: 'row',
-    label: 'Mantenimiento de consolas de audio y equipos de reproducción.',
-    estado: anyMant ? 'Cumplido' : 'N/A',
-    obs: anyMant
-      ? 'Limpieza, ordenamiento y verificación operativa de consolas de mezcla, procesadores, amplificadores y periféricos de la cabina de audio.'
-      : 'Sin visitas registradas en el período; actividad no aplicable.',
-  })
+  items.push(row(
+    'Limpieza y revisión de bocinas, rejillas protectoras y conectores.',
+    anyMant,
+    'Se realizó limpieza profunda de bocinas, rejillas protectoras y conectores utilizando aire comprimido y productos especializados para equipos electrónicos. Se verificó el estado físico de los componentes, descartando presencia de humedad, corrosión, sulfatación o conexiones flojas. El sistema quedó en óptimas condiciones de funcionamiento.',
+    'Sin visitas registradas en el período; actividad no aplicable.',
+    false,
+  ))
+  items.push(row(
+    'Mantenimiento de consolas de audio y equipos de reproducción.',
+    anyMant,
+    'Se efectuó limpieza interna y externa de las consolas de audio, reproductores y amplificadores. Se verificó el correcto funcionamiento de botones, faders, perillas, conexiones de entrada y salida, además del sistema de alimentación eléctrica. Se organizó el cableado para facilitar futuras intervenciones.',
+    'Sin visitas registradas en el período; actividad no aplicable.',
+    false,
+  ))
 
   items.push({ type: 'group', label: 'Cuidado de pantallas digitales COLOSSEO, abarcando:' })
-  items.push({
-    type: 'row', indent: true,
-    label: 'Limpieza de gabinetes, ventiladores, rejillas, filtros y conectores.',
-    estado: anyMant ? 'Cumplido' : 'N/A',
-    obs: anyMant
-      ? 'Limpieza técnica de gabinetes, ventiladores, rejillas, filtros y conectores con aire comprimido y limpiador dieléctrico especializado.'
-      : 'Sin intervenciones sobre pantallas digitales en el período.',
-  })
-  items.push({
-    type: 'row', indent: true,
-    label: 'Revisión y mantenimiento de cableado eléctrico y de señal.',
-    estado: anyMant ? 'Cumplido' : 'N/A',
-    obs: anyMant
-      ? 'Cableado eléctrico y de señal revisado, etiquetado y organizado; se verificó continuidad y firmeza de conectores. Sin fallas detectadas.'
-      : 'Sin intervenciones de cableado en el período.',
-  })
-  items.push({
-    type: 'row', indent: true,
-    label: 'Soldaduras y cambios en componentes como LEDs y tarjetas de señal.',
-    estado: hasCorr || hasLedRepair ? 'Cumplido' : 'N/A',
-    obs: hasCorr || hasLedRepair
-      ? (piezas.length
-          ? `Se ejecutaron ${piezas.length} reparación(es) / cambio(s) de componente(s) electrónico(s) (LEDs, tarjetas o conectores) con trazabilidad completa por número de serie.`
-          : 'Intervención correctiva ejecutada sobre componentes electrónicos; sin retiro de piezas del inventario.')
-      : 'No se detectaron componentes electrónicos dañados que requieran soldadura o reemplazo en el período.',
-  })
-  items.push({
-    type: 'row', indent: true,
-    label: 'Pruebas para asegurar el rendimiento óptimo.',
-    estado: anyMant ? 'Cumplido' : 'N/A',
-    obs: anyMant
-      ? 'Se ejecutaron pruebas de continuidad, ajuste de niveles y validación de funcionamiento al cierre de cada intervención.'
-      : 'Sin intervenciones que validar en el período.',
-  })
-  items.push({
-    type: 'row', indent: true,
-    label: 'Mantenimiento de estructuras metálicas y tensores.',
-    estado: anyMant ? 'Cumplido' : 'N/A',
-    obs: anyMant
-      ? 'Revisión mecánica de tornillería, fijaciones, tensores y anclajes de la estructura de soporte. Sin novedades reportadas.'
-      : 'Sin intervenciones sobre estructuras en el período.',
-  })
+  items.push(row(
+    'Limpieza de gabinetes, ventiladores, rejillas, filtros y conectores.',
+    anyMant,
+    'Se realizó limpieza técnica integral de los gabinetes del Scoreboard utilizando aire comprimido y limpiador dieléctrico para remover polvo acumulado. Se limpiaron ventiladores, rejillas, filtros de ventilación y conectores eléctricos y de señal, mejorando la disipación térmica y prolongando la vida útil de los equipos.',
+    'Sin intervenciones sobre pantallas digitales en el período.',
+  ))
+  items.push(row(
+    'Revisión y mantenimiento de cableado eléctrico y de señal.',
+    anyMant,
+    'Se inspeccionó la totalidad del cableado de alimentación eléctrica y transmisión de datos. Se verificó continuidad, fijaciones, conectores, terminales y puntos de conexión, corrigiendo la organización del cableado mediante sujetadores y etiquetado para facilitar futuras labores de mantenimiento. No se detectaron anomalías eléctricas ni pérdidas de señal.',
+    'Sin intervenciones de cableado en el período.',
+  ))
+  // LEDs / tarjetas: por defecto N/A a menos que se detecte reparación real.
+  {
+    const aplicaLED = hasCorr || hasLedRepair
+    items.push(row(
+      'Soldaduras y cambios en componentes como LEDs y tarjetas de señal.',
+      aplicaLED,
+      piezas.length
+        ? `Se ejecutaron ${piezas.length} reparación(es) / cambio(s) de componente(s) electrónico(s) (LEDs, tarjetas o conectores) con trazabilidad completa por número de serie, garantizando la continuidad operativa de las pantallas.`
+        : 'Se ejecutaron trabajos de soldadura y sustitución de componentes electrónicos afectados (LEDs, tarjetas de señal o conectores), restableciendo el correcto funcionamiento de las pantallas.',
+      'No se detectaron componentes electrónicos dañados que requieran soldadura o reemplazo en el período.',
+    ))
+  }
+  items.push(row(
+    'Pruebas para asegurar el rendimiento óptimo.',
+    anyMant,
+    'Finalizada la intervención se realizaron pruebas completas de encendido, reproducción de contenido, comunicación entre controlador y pantalla, uniformidad de imagen, estabilidad eléctrica y funcionamiento continuo del sistema, verificando un desempeño normal de todos los equipos.',
+    'Sin intervenciones que validar en el período.',
+  ))
+  items.push(row(
+    'Mantenimiento de estructuras metálicas y tensores.',
+    anyMant,
+    'Se inspeccionó la estructura metálica del Scoreboard verificando el estado de pernos, anclajes, soportes, tornillería, soldaduras y tensores. No se observaron deformaciones, corrosión estructural ni elementos que comprometieran la seguridad de la instalación.',
+    'Sin intervenciones sobre estructuras en el período.',
+  ))
 
   items.push({ type: 'group', label: 'Producción técnica para eventos deportivos, que incluye:' })
-  items.push({
-    type: 'row', indent: true,
-    label: 'Personal técnico especializado en audio, video y electrónica.',
-    estado: tecnicos > 0 ? 'Cumplido' : 'N/A',
-    obs: tecnicos > 0
-      ? `Se asignó equipo multidisciplinario de ${tecnicos} técnico(s) especializado(s) en audio, video y electrónica para las intervenciones del período.`
-      : 'Sin personal técnico asignado en el período.',
-  })
-  items.push({
-    type: 'row', indent: true,
-    label: 'Equipos de operación para control de juegos y supervisión de acceso.',
-    estado: hasEventos || hasOper ? 'Cumplido' : 'N/A',
-    obs: hasEventos || hasOper
-      ? `Se cubrió operación técnica en ${nEventOper} evento(s) / soporte(s) del período conforme a la programación acordada.`
-      : 'No requerido en el período; no se programaron eventos deportivos en el escenario.',
-  })
-  items.push({
-    type: 'row', indent: true,
-    label: 'Roles y turnos para cubrir las necesidades en eventos deportivos.',
-    estado: hasEventos || hasOper ? 'Cumplido' : 'N/A',
-    obs: hasEventos || hasOper
-      ? 'Se organizaron roles y turnos del personal técnico conforme a la agenda de eventos del período.'
-      : 'No requerido en el período; no se programaron eventos deportivos en el escenario.',
-  })
-  items.push({
-    type: 'row', indent: true,
-    label: 'Preproducción colaborativa con ingenieros y técnicos.',
-    estado: anyMant || hasEventos ? 'Cumplido' : 'N/A',
-    obs: anyMant || hasEventos
-      ? 'Coordinación previa de logística, materiales y responsabilidades del equipo técnico antes de cada intervención.'
-      : 'Sin actividades que preparar en el período.',
-  })
-  items.push({
-    type: 'row', indent: true,
-    label: 'Mantenimiento preventivo y correctivo para preservar equipos.',
-    estado: hasPrev || hasCorr ? 'Cumplido' : 'N/A',
-    obs: hasPrev && hasCorr
-      ? 'Se ejecutaron mantenimiento preventivo y acciones correctivas dentro del período, preservando la operación de los equipos.'
-      : hasPrev
-        ? 'Mantenimiento preventivo ejecutado según programación. Sin correctivos pendientes.'
-        : hasCorr
-          ? 'Se atendieron los correctivos requeridos, restableciendo la operación de los equipos afectados.'
-          : 'Sin intervenciones de mantenimiento registradas en el período.',
-  })
+  items.push(row(
+    'Personal técnico especializado en audio, video y electrónica.',
+    tecnicos > 0 || anyMant,
+    'La intervención fue ejecutada por personal técnico certificado y con experiencia en sistemas audiovisuales, pantallas LED, infraestructura eléctrica y electrónica industrial, garantizando la correcta ejecución de todas las actividades de mantenimiento.',
+    'Sin personal técnico asignado en el período.',
+  ))
+  items.push(row(
+    'Equipos de operación para control de juegos y supervisión de acceso.',
+    hasEventos || hasOper,
+    'Se dispuso del personal y equipos de operación necesarios para el control de juegos y supervisión de acceso durante los eventos del período.',
+    'No requerido en el período; no se programaron eventos deportivos en el escenario.',
+  ))
+  items.push(row(
+    'Roles y turnos para cubrir las necesidades en eventos deportivos.',
+    hasEventos || hasOper,
+    'Se organizaron roles y turnos del personal técnico conforme a la agenda de eventos del período, garantizando la cobertura operativa completa.',
+    'No requerido en el período; no se programaron eventos deportivos en el escenario.',
+  ))
+  items.push(row(
+    'Preproducción colaborativa con ingenieros y técnicos.',
+    hasEventos,
+    'Se coordinó la preproducción con ingenieros y técnicos, definiendo logística, materiales, responsables y contingencias antes de cada evento.',
+    'Sin actividades que preparar en el período.',
+  ))
+  items.push(row(
+    'Mantenimiento preventivo y correctivo para preservar equipos.',
+    hasPrev || hasCorr,
+    hasCorr && hasPrev
+      ? 'Se ejecutó mantenimiento preventivo completo conforme al plan establecido, incluyendo inspección mecánica, eléctrica y electrónica, y se atendieron las acciones correctivas requeridas para preservar el funcionamiento de los equipos.'
+      : hasCorr
+        ? 'Se ejecutaron las acciones correctivas requeridas sobre los equipos afectados, restableciendo su correcto funcionamiento dentro del período.'
+        : 'Se ejecutó mantenimiento preventivo completo conforme al plan establecido, incluyendo inspección mecánica, eléctrica y electrónica. No fue necesario efectuar mantenimiento correctivo debido al adecuado estado de funcionamiento de los equipos.',
+    'Sin intervenciones de mantenimiento registradas en el período.',
+  ))
 
   items.push({ type: 'group', label: 'Aspectos adicionales:' })
-  items.push(...[
-    {
-      label: 'Seguridad para el personal técnico.',
-      cumplida: anyMant,
-      obsOk: 'Uso permanente de equipo de protección personal (EPP) por todo el personal técnico durante las intervenciones.',
-      obsNa: 'Sin intervenciones en el período; no aplicable.',
-    },
-    {
-      label: 'Mantenimiento de equipo de cabina de producción.',
-      cumplida: anyMant,
-      obsOk: 'Cabina de producción organizada; consolas, monitores y periféricos verificados en condiciones óptimas de operación.',
-      obsNa: 'Sin intervenciones en cabina durante el período.',
-    },
-    {
-      label: 'Coordinación de intervenciones en equipo a demanda.',
-      cumplida: anyMant || hasEventos,
-      obsOk: 'Intervenciones planificadas y ejecutadas conforme a la orden de pedido mensual y ventanas operativas del escenario.',
-      obsNa: 'No requerido en el presente período.',
-    },
-    {
-      label: 'Actualizaciones y configuración de equipos acorde a normativas.',
-      cumplida: anyMant,
-      obsOk: 'Configuración y parámetros de operación de los equipos verificados; sin actualizaciones críticas pendientes en el período.',
-      obsNa: 'No requerido en el presente período.',
-    },
-  ].map<ComplianceItem>(r => ({
-    type: 'row', indent: true, label: r.label,
-    estado: r.cumplida ? 'Cumplido' : 'N/A',
-    obs: r.cumplida ? r.obsOk : r.obsNa,
-  })))
+  items.push(row(
+    'Seguridad para el personal técnico.',
+    anyMant,
+    'Todo el personal ejecutó las labores utilizando el Equipo de Protección Personal (EPP) correspondiente, respetando los protocolos de seguridad industrial y procedimientos establecidos para trabajos en equipos eléctricos y electrónicos.',
+    'Sin intervenciones en el período; no aplicable.',
+  ))
+  items.push(row(
+    'Mantenimiento de equipo de cabina de producción.',
+    anyMant,
+    'Se efectuó limpieza general de la cabina de producción, ordenamiento del cableado, revisión de conexiones, verificación del funcionamiento de consolas, monitores, UPS, equipos de reproducción y demás dispositivos que forman parte del sistema audiovisual del recinto.',
+    'Sin intervenciones en cabina durante el período.',
+  ))
+  items.push(row(
+    'Coordinación de intervenciones en equipo a demanda.',
+    anyMant || hasEventos,
+    'Las actividades fueron ejecutadas conforme al cronograma mensual y a la orden de servicio emitida, manteniendo coordinación permanente con el personal responsable del estadio para garantizar la continuidad operativa de las instalaciones.',
+    'No requerido en el presente período.',
+  ))
+  items.push(row(
+    'Actualizaciones y configuración de equipos acorde a normativas.',
+    anyMant,
+    'Se verificó la configuración de los equipos electrónicos, controladores y sistemas de comunicación, confirmando que operan conforme a las especificaciones técnicas del fabricante y sin requerir actualizaciones de firmware o software durante el presente período.',
+    'No requerido en el presente período.',
+  ))
   items.push({
     type: 'row', indent: true,
     label: 'Preparación de instrucciones audiovisuales para emergencias.',
