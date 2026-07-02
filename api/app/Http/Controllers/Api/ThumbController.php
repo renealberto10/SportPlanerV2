@@ -49,11 +49,36 @@ class ThumbController extends Controller
             ]);
         }
 
+        // Safety net: if GD lacks support for the requested format in this
+        // environment, fall back to streaming the original file so photos
+        // still render (they will just be heavier). This avoids 500s when
+        // libjpeg / libwebp are not compiled into the container's GD.
+        $needsJpeg = $mime === 'image/jpeg' || $mime === 'image/png' || $mime === 'image/gif' || $mime === 'image/webp';
+        if ($needsJpeg && !function_exists('imagejpeg')) {
+            return response()->file($srcAbs, [
+                'Cache-Control' => 'public, max-age=31536000, immutable',
+            ]);
+        }
+        if ($mime === 'image/webp' && !function_exists('imagecreatefromwebp')) {
+            return response()->file($srcAbs, [
+                'Cache-Control' => 'public, max-age=31536000, immutable',
+            ]);
+        }
+
         $thumbRel = "thumbs/w{$w}/" . preg_replace('/\.(jpe?g|png|webp|gif)$/i', '.jpg', $path);
         $thumbAbs = $disk->path($thumbRel);
 
         if (!file_exists($thumbAbs) || filemtime($thumbAbs) < filemtime($srcAbs)) {
-            $this->makeThumb($srcAbs, $thumbAbs, $w);
+            try {
+                $this->makeThumb($srcAbs, $thumbAbs, $w);
+            } catch (\Throwable $e) {
+                // Any GD/EXIF failure → serve the original so the report
+                // preview keeps working.
+                report($e);
+                return response()->file($srcAbs, [
+                    'Cache-Control' => 'public, max-age=31536000, immutable',
+                ]);
+            }
         }
 
         return response()->file($thumbAbs, [
@@ -66,19 +91,19 @@ class ThumbController extends Controller
     {
         $info = @getimagesize($src);
         if (!$info) {
-            abort(500, 'invalid image');
+            throw new \RuntimeException('invalid image');
         }
         [$srcW, $srcH, $type] = $info;
 
         $img = match ($type) {
-            IMAGETYPE_JPEG => imagecreatefromjpeg($src),
-            IMAGETYPE_PNG  => imagecreatefrompng($src),
+            IMAGETYPE_JPEG => function_exists('imagecreatefromjpeg') ? imagecreatefromjpeg($src) : null,
+            IMAGETYPE_PNG  => function_exists('imagecreatefrompng')  ? imagecreatefrompng($src)  : null,
             IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? imagecreatefromwebp($src) : null,
-            IMAGETYPE_GIF  => imagecreatefromgif($src),
+            IMAGETYPE_GIF  => function_exists('imagecreatefromgif')  ? imagecreatefromgif($src)  : null,
             default        => null,
         };
         if (!$img) {
-            abort(500, 'unsupported image type');
+            throw new \RuntimeException('unsupported image type');
         }
 
         // Auto-rotate JPEGs based on EXIF orientation (phones)

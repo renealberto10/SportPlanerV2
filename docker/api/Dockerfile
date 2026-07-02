@@ -4,10 +4,10 @@ FROM php:8.4-fpm-alpine AS base
 # System deps
 RUN apk add --no-cache \
         nginx supervisor \
-        sqlite-dev libpng-dev libzip-dev \
+        sqlite-dev libpng-dev libzip-dev libjpeg-turbo-dev libwebp-dev freetype-dev \
         curl git zip unzip \
-    && docker-php-ext-configure gd \
-    && docker-php-ext-install pdo pdo_sqlite zip gd opcache
+    && docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
+    && docker-php-ext-install pdo pdo_sqlite zip gd opcache exif
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
