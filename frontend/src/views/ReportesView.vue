@@ -6,8 +6,11 @@
         <h2 class="page-title">Generador de Reportes</h2>
         <p class="text-xs text-slate-500 mt-0.5">Informes técnicos con evidencia fotográfica</p>
       </div>
-      <div v-if="reportData" class="flex gap-2">
-        <button class="btn btn-outline" @click="reportData = null">✕ Cerrar</button>
+      <div v-if="reportData && !preparingCompliance" class="flex gap-2">
+        <button class="btn btn-outline" @click="closeReport">✕ Cerrar</button>
+        <button v-if="reportData.tipoReporte === 'mantenimiento'" class="btn btn-outline" @click="preparingCompliance = true">
+          ← Editar Anexo
+        </button>
         <button class="btn btn-outline" :disabled="generatingDocx" @click="printDocx">{{ generatingDocx ? "Generando Word..." : "Descargar Word" }}</button>
         <button class="btn btn-success" :disabled="generatingPdf" @click="printDoc">{{ generatingPdf ? "Generando PDF..." : "Descargar PDF" }}</button>
       </div>
@@ -102,9 +105,88 @@
     </div>
 
     <!-- ════════════════════════════════════════════════════════════════════
+         PASO INTERMEDIO — PERSONALIZAR CUMPLIMIENTO CONTRACTUAL (Sección 9)
+         Sólo aplica a reportes de mantenimiento.
+         ════════════════════════════════════════════════════════════════════ -->
+    <div v-if="reportData && preparingCompliance && reportData.tipoReporte === 'mantenimiento'" class="card mb-6 no-print">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <h3 class="font-semibold text-slate-800 text-sm">
+            Personalizar Sección 9 — Cumplimiento de Servicios Contratados
+            <span v-if="config.oc" class="text-xs text-slate-500 font-normal ml-1">(Anexo No. 1 – OC {{ config.oc }})</span>
+          </h3>
+          <p class="text-xs text-slate-500 mt-1">
+            Los valores se pre-cargaron a partir de los mantenimientos, técnicos y eventos del período.
+            Ajusta el <strong>Estado</strong> y las <strong>Observaciones</strong> según el trabajo realmente ejecutado en el escenario antes de generar el reporte.
+          </p>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+          <button class="btn btn-outline btn-sm" @click="resetCompliance(Number(filters.escenario_id))">
+            ↻ Restablecer defaults
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs uppercase tracking-wide text-slate-500 border-b border-slate-200">
+              <th class="py-2 pr-3 w-1/2">Servicio / Obligación Contractual</th>
+              <th class="py-2 pr-3 w-32">Estado</th>
+              <th class="py-2">Observaciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template v-for="(row, i) in complianceState">
+              <tr v-if="row.type === 'group'" :key="'eg'+i" class="bg-blue-50/60">
+                <td colspan="3" class="py-2 px-2 text-slate-700 text-xs font-semibold">
+                  • {{ row.label }}
+                </td>
+              </tr>
+              <tr v-else :key="'er'+i" class="border-b border-slate-100 align-top">
+                <td class="py-2 pr-3" :class="row.indent ? 'pl-6' : ''">
+                  <span class="text-slate-500 mr-1">{{ row.indent ? '*' : '•' }}</span>
+                  <span class="text-slate-800">{{ row.label }}</span>
+                </td>
+                <td class="py-2 pr-3">
+                  <div class="inline-flex rounded-lg border border-slate-200 overflow-hidden text-xs">
+                    <button type="button"
+                      class="px-2 py-1 transition-colors"
+                      :class="row.estado === 'Cumplido' ? 'bg-emerald-500 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'"
+                      @click="setComplianceEstado(row, 'Cumplido')">Cumplido</button>
+                    <button type="button"
+                      class="px-2 py-1 border-l border-slate-200 transition-colors"
+                      :class="row.estado === 'Pendiente' ? 'bg-amber-500 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'"
+                      @click="setComplianceEstado(row, 'Pendiente')">Pendiente</button>
+                    <button type="button"
+                      class="px-2 py-1 border-l border-slate-200 transition-colors"
+                      :class="row.estado === 'N/A' ? 'bg-slate-500 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'"
+                      @click="setComplianceEstado(row, 'N/A')">N/A</button>
+                  </div>
+                </td>
+                <td class="py-2">
+                  <textarea v-model="row.obs" rows="2"
+                    class="w-full text-xs px-2 py-1.5 border border-slate-200 rounded-md resize-y focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                    placeholder="Observación (opcional)…"></textarea>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex flex-wrap justify-between items-center gap-2 mt-6 pt-4 border-t border-slate-100">
+        <button class="btn btn-outline" @click="closeReport">← Volver a configuración</button>
+        <button class="btn btn-primary" @click="preparingCompliance = false">
+          ✓ Generar Reporte
+        </button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
          REPORTE DE MANTENIMIENTO (un solo escenario)
          ════════════════════════════════════════════════════════════════════ -->
-    <div v-if="reportData && reportData.tipoReporte === 'mantenimiento'" id="reporte-doc">
+    <div v-if="reportData && !preparingCompliance && reportData.tipoReporte === 'mantenimiento'" id="reporte-doc">
       <div class="report-page" v-for="esc in reportData.escenarios" :key="esc.id">
 
           <!-- HEADER -->
@@ -549,11 +631,11 @@
                 </tr>
               </thead>
               <tbody>
-                <template v-for="(item, i) in complianceItems(esc.id)" :key="'c'+i">
-                  <tr v-if="item.type === 'group'" class="r-compliance-group">
+                <template v-for="(item, i) in complianceState">
+                  <tr v-if="item.type === 'group'" :key="'cg'+i" class="r-compliance-group">
                     <td colspan="3">• <strong>{{ item.label }}</strong></td>
                   </tr>
-                  <tr v-else>
+                  <tr v-else :key="'cr'+i">
                     <td :class="item.indent ? 'r-compliance-indent' : ''">
                       {{ item.indent ? '*' : '•' }} {{ item.label }}
                     </td>
@@ -587,7 +669,8 @@
         </div>
 
       <div class="text-center no-print mt-6 pb-6">
-        <button class="btn btn-outline" @click="reportData = null">← Volver</button>
+        <button class="btn btn-outline" @click="closeReport">← Volver</button>
+        <button class="btn btn-outline ml-2" @click="preparingCompliance = true">← Editar Anexo</button>
         <button class="btn btn-outline ml-2" :disabled="generatingDocx" @click="printDocx">{{ generatingDocx ? "Generando Word..." : "Descargar Word" }}</button>
         <button class="btn btn-success ml-2" :disabled="generatingPdf" @click="printDoc">{{ generatingPdf ? "Generando PDF..." : "Descargar PDF" }}</button>
       </div>
@@ -756,7 +839,7 @@
       </div>
 
       <div class="text-center no-print mt-6 pb-6">
-        <button class="btn btn-outline" @click="reportData = null">← Volver</button>
+        <button class="btn btn-outline" @click="closeReport">← Volver</button>
         <button class="btn btn-outline ml-2" :disabled="generatingDocx" @click="printDocx">{{ generatingDocx ? "Generando Word..." : "Descargar Word" }}</button>
         <button class="btn btn-success ml-2" :disabled="generatingPdf" @click="printDoc">{{ generatingPdf ? "Generando PDF..." : "Descargar PDF" }}</button>
       </div>
@@ -1208,8 +1291,8 @@ const sistemasEstado = [
 ]
 
 // ── Cumplimiento contractual (Anexo No. 1 – OC) ───────────
-// Deriva estados y observaciones de los datos ya cargados
-// (mantenimientos, técnicos, piezas y eventos del período).
+// Los defaults se derivan de los datos del período; el usuario puede
+// ajustar Estado y Observaciones antes de generar el reporte final.
 type ComplianceItem =
   | { type: 'group'; label: string }
   | { type: 'row'; label: string; estado: 'Cumplido' | 'N/A' | 'Pendiente'; obs: string; indent?: boolean }
@@ -1220,7 +1303,11 @@ const complianceBadge = (estado: string) => ({
   'Pendiente': 'badge badge-yellow',
 }[estado] || 'badge badge-gray')
 
-function complianceItems(id: number): ComplianceItem[] {
+// Estado editable de la sección 9 (rellenado por initCompliance).
+const complianceState = ref<ComplianceItem[]>([])
+const preparingCompliance = ref(false)
+
+function buildDefaultCompliance(id: number): ComplianceItem[] {
   const mants        = mantsForEsc(id)
   const hasPrev      = hasType(id, 'preventivo')
   const hasCorr      = hasType(id, 'correctivo')
@@ -1231,6 +1318,7 @@ function complianceItems(id: number): ComplianceItem[] {
   const eventos      = eventosForEsc(id)
   const hasEventos   = eventos.length > 0
   const tecnicos     = tecnicosForEsc(id).length
+  const nEventOper   = eventos.length + (hasOper ? countTipo(id, 'operativo') : 0)
 
   const items: ComplianceItem[] = []
 
@@ -1239,16 +1327,16 @@ function complianceItems(id: number): ComplianceItem[] {
     label: 'Limpieza y revisión de bocinas, rejillas protectoras y conectores.',
     estado: anyMant ? 'Cumplido' : 'N/A',
     obs: anyMant
-      ? 'Limpieza profunda realizada en bocinas y rejillas del escenario.'
-      : 'Sin visitas registradas en el período.',
+      ? 'Limpieza profunda de bocinas, rejillas protectoras y conectores; verificación de ajuste mecánico y estado general de los transductores del escenario.'
+      : 'Sin visitas registradas en el período; actividad no aplicable.',
   })
   items.push({
     type: 'row',
     label: 'Mantenimiento de consolas de audio y equipos de reproducción.',
     estado: anyMant ? 'Cumplido' : 'N/A',
     obs: anyMant
-      ? 'Limpieza y ordenamiento de consolas y amplificadores en cabina.'
-      : 'Sin visitas registradas en el período.',
+      ? 'Limpieza, ordenamiento y verificación operativa de consolas de mezcla, procesadores, amplificadores y periféricos de la cabina de audio.'
+      : 'Sin visitas registradas en el período; actividad no aplicable.',
   })
 
   items.push({ type: 'group', label: 'Cuidado de pantallas digitales COLOSSEO, abarcando:' })
@@ -1257,16 +1345,16 @@ function complianceItems(id: number): ComplianceItem[] {
     label: 'Limpieza de gabinetes, ventiladores, rejillas, filtros y conectores.',
     estado: anyMant ? 'Cumplido' : 'N/A',
     obs: anyMant
-      ? 'Limpieza técnica con aire comprimido y limpiador dieléctrico.'
-      : 'Sin visitas registradas en el período.',
+      ? 'Limpieza técnica de gabinetes, ventiladores, rejillas, filtros y conectores con aire comprimido y limpiador dieléctrico especializado.'
+      : 'Sin intervenciones sobre pantallas digitales en el período.',
   })
   items.push({
     type: 'row', indent: true,
     label: 'Revisión y mantenimiento de cableado eléctrico y de señal.',
     estado: anyMant ? 'Cumplido' : 'N/A',
     obs: anyMant
-      ? 'Cableado revisado, etiquetado y organizado. Sin fallas detectadas.'
-      : 'Sin visitas registradas en el período.',
+      ? 'Cableado eléctrico y de señal revisado, etiquetado y organizado; se verificó continuidad y firmeza de conectores. Sin fallas detectadas.'
+      : 'Sin intervenciones de cableado en el período.',
   })
   items.push({
     type: 'row', indent: true,
@@ -1274,16 +1362,16 @@ function complianceItems(id: number): ComplianceItem[] {
     estado: hasCorr || hasLedRepair ? 'Cumplido' : 'N/A',
     obs: hasCorr || hasLedRepair
       ? (piezas.length
-          ? `Se realizaron ${piezas.length} cambio(s) de componente(s) con trazabilidad por número de serie.`
-          : 'Intervención correctiva ejecutada sobre componentes electrónicos.')
-      : 'No se detectaron componentes dañados en el período.',
+          ? `Se ejecutaron ${piezas.length} reparación(es) / cambio(s) de componente(s) electrónico(s) (LEDs, tarjetas o conectores) con trazabilidad completa por número de serie.`
+          : 'Intervención correctiva ejecutada sobre componentes electrónicos; sin retiro de piezas del inventario.')
+      : 'No se detectaron componentes electrónicos dañados que requieran soldadura o reemplazo en el período.',
   })
   items.push({
     type: 'row', indent: true,
     label: 'Pruebas para asegurar el rendimiento óptimo.',
     estado: anyMant ? 'Cumplido' : 'N/A',
     obs: anyMant
-      ? 'Validación de funcionamiento al cierre de la intervención.'
+      ? 'Se ejecutaron pruebas de continuidad, ajuste de niveles y validación de funcionamiento al cierre de cada intervención.'
       : 'Sin intervenciones que validar en el período.',
   })
   items.push({
@@ -1291,8 +1379,8 @@ function complianceItems(id: number): ComplianceItem[] {
     label: 'Mantenimiento de estructuras metálicas y tensores.',
     estado: anyMant ? 'Cumplido' : 'N/A',
     obs: anyMant
-      ? 'Revisión mecánica de tornillería, fijaciones y tensores. Sin novedades.'
-      : 'Sin visitas registradas en el período.',
+      ? 'Revisión mecánica de tornillería, fijaciones, tensores y anclajes de la estructura de soporte. Sin novedades reportadas.'
+      : 'Sin intervenciones sobre estructuras en el período.',
   })
 
   items.push({ type: 'group', label: 'Producción técnica para eventos deportivos, que incluye:' })
@@ -1301,7 +1389,7 @@ function complianceItems(id: number): ComplianceItem[] {
     label: 'Personal técnico especializado en audio, video y electrónica.',
     estado: tecnicos > 0 ? 'Cumplido' : 'N/A',
     obs: tecnicos > 0
-      ? `Equipo de ${tecnicos} técnico(s) especializado(s) asignado(s) a las visitas.`
+      ? `Se asignó equipo multidisciplinario de ${tecnicos} técnico(s) especializado(s) en audio, video y electrónica para las intervenciones del período.`
       : 'Sin personal técnico asignado en el período.',
   })
   items.push({
@@ -1309,23 +1397,23 @@ function complianceItems(id: number): ComplianceItem[] {
     label: 'Equipos de operación para control de juegos y supervisión de acceso.',
     estado: hasEventos || hasOper ? 'Cumplido' : 'N/A',
     obs: hasEventos || hasOper
-      ? `Cobertura brindada en ${eventos.length + (hasOper ? countTipo(id, 'operativo') : 0)} evento(s)/soporte(s) del período.`
-      : 'No requerido; sin eventos en el período.',
+      ? `Se cubrió operación técnica en ${nEventOper} evento(s) / soporte(s) del período conforme a la programación acordada.`
+      : 'No requerido en el período; no se programaron eventos deportivos en el escenario.',
   })
   items.push({
     type: 'row', indent: true,
     label: 'Roles y turnos para cubrir las necesidades en eventos deportivos.',
     estado: hasEventos || hasOper ? 'Cumplido' : 'N/A',
     obs: hasEventos || hasOper
-      ? 'Roles y turnos coordinados conforme a la programación.'
-      : 'No requerido; sin eventos en el período.',
+      ? 'Se organizaron roles y turnos del personal técnico conforme a la agenda de eventos del período.'
+      : 'No requerido en el período; no se programaron eventos deportivos en el escenario.',
   })
   items.push({
     type: 'row', indent: true,
     label: 'Preproducción colaborativa con ingenieros y técnicos.',
     estado: anyMant || hasEventos ? 'Cumplido' : 'N/A',
     obs: anyMant || hasEventos
-      ? 'Coordinación interna del equipo técnico previo a la visita.'
+      ? 'Coordinación previa de logística, materiales y responsabilidades del equipo técnico antes de cada intervención.'
       : 'Sin actividades que preparar en el período.',
   })
   items.push({
@@ -1333,12 +1421,12 @@ function complianceItems(id: number): ComplianceItem[] {
     label: 'Mantenimiento preventivo y correctivo para preservar equipos.',
     estado: hasPrev || hasCorr ? 'Cumplido' : 'N/A',
     obs: hasPrev && hasCorr
-      ? 'Mantenimiento preventivo y correctivo ejecutados.'
+      ? 'Se ejecutaron mantenimiento preventivo y acciones correctivas dentro del período, preservando la operación de los equipos.'
       : hasPrev
-        ? 'Mantenimiento preventivo ejecutado. Sin correctivos pendientes.'
+        ? 'Mantenimiento preventivo ejecutado según programación. Sin correctivos pendientes.'
         : hasCorr
-          ? 'Mantenimientos correctivos ejecutados.'
-          : 'Sin intervenciones registradas en el período.',
+          ? 'Se atendieron los correctivos requeridos, restableciendo la operación de los equipos afectados.'
+          : 'Sin intervenciones de mantenimiento registradas en el período.',
   })
 
   items.push({ type: 'group', label: 'Aspectos adicionales:' })
@@ -1346,25 +1434,25 @@ function complianceItems(id: number): ComplianceItem[] {
     {
       label: 'Seguridad para el personal técnico.',
       cumplida: anyMant,
-      obsOk: 'Uso de EPP durante toda la intervención.',
-      obsNa: 'Sin intervenciones en el período.',
+      obsOk: 'Uso permanente de equipo de protección personal (EPP) por todo el personal técnico durante las intervenciones.',
+      obsNa: 'Sin intervenciones en el período; no aplicable.',
     },
     {
       label: 'Mantenimiento de equipo de cabina de producción.',
       cumplida: anyMant,
-      obsOk: 'Cabina organizada y equipos en condiciones óptimas de operación.',
-      obsNa: 'Sin intervenciones en el período.',
+      obsOk: 'Cabina de producción organizada; consolas, monitores y periféricos verificados en condiciones óptimas de operación.',
+      obsNa: 'Sin intervenciones en cabina durante el período.',
     },
     {
       label: 'Coordinación de intervenciones en equipo a demanda.',
       cumplida: anyMant || hasEventos,
-      obsOk: 'Intervención coordinada conforme orden de pedido mensual.',
+      obsOk: 'Intervenciones planificadas y ejecutadas conforme a la orden de pedido mensual y ventanas operativas del escenario.',
       obsNa: 'No requerido en el presente período.',
     },
     {
       label: 'Actualizaciones y configuración de equipos acorde a normativas.',
       cumplida: anyMant,
-      obsOk: 'Configuración verificada; sin actualizaciones pendientes.',
+      obsOk: 'Configuración y parámetros de operación de los equipos verificados; sin actualizaciones críticas pendientes en el período.',
       obsNa: 'No requerido en el presente período.',
     },
   ].map<ComplianceItem>(r => ({
@@ -1380,6 +1468,19 @@ function complianceItems(id: number): ComplianceItem[] {
   })
 
   return items
+}
+
+function initCompliance(id: number) {
+  complianceState.value = buildDefaultCompliance(id)
+}
+
+function resetCompliance(id: number) {
+  initCompliance(id)
+  toast.add('Se restablecieron los valores por defecto', 'info')
+}
+
+function setComplianceEstado(row: Extract<ComplianceItem, { type: 'row' }>, estado: 'Cumplido' | 'N/A' | 'Pendiente') {
+  row.estado = estado
 }
 
 // ── Generate ──────────────────────────────────────────────
@@ -1399,16 +1500,35 @@ async function generar() {
       ? !data.mantenimientos?.length
       : !data.eventos?.length
 
+    // Para reportes de mantenimiento, pasa al paso de personalización
+    // del Anexo No. 1 (Cumplimiento Contractual) antes de renderizar
+    // el reporte final.
+    if (filters.tipoReporte === 'mantenimiento') {
+      const escId = Number(filters.escenario_id)
+      initCompliance(escId)
+      preparingCompliance.value = true
+    }
+
     if (empty) {
       toast.add('Sin registros para el período seleccionado', 'info')
     } else {
-      toast.add('Reporte generado')
+      toast.add(
+        filters.tipoReporte === 'mantenimiento'
+          ? 'Datos cargados. Revisa el Anexo de cumplimiento y genera el reporte.'
+          : 'Reporte generado',
+      )
     }
   } catch (e) {
     handleError(e, 'Error al generar el reporte')
   } finally {
     loading.value = false
   }
+}
+
+function closeReport() {
+  reportData.value = null
+  preparingCompliance.value = false
+  complianceState.value = []
 }
 
 onMounted(async () => {
