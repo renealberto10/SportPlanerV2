@@ -81,7 +81,7 @@
           </p>
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-4 mb-5">
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
         <div>
           <label class="label">Contratista</label>
           <input v-model="config.contratista" class="input" placeholder="ISATECH, S.A.S. de C.V." />
@@ -89,6 +89,11 @@
         <div>
           <label class="label">Administrado por</label>
           <input v-model="config.administrador" class="input" placeholder="INDES" />
+        </div>
+        <div>
+          <label class="label">Orden de Compra (OC)</label>
+          <input v-model="config.oc" class="input" placeholder="115/2026" />
+          <p class="text-xs text-slate-500 mt-1">Aparece en el Anexo de cumplimiento contractual.</p>
         </div>
       </div>
       <button class="btn btn-primary" :disabled="loading || !canGenerate" @click="generar">
@@ -528,6 +533,40 @@
             </ul>
           </div>
 
+          <!-- 11. CUMPLIMIENTO DE SERVICIOS CONTRATADOS (Anexo No. 1) -->
+          <div class="r-section">
+            <div class="r-section-title">
+              {{ resultsSectionNum(esc.id) + 3 }}. Cumplimiento de Servicios Contratados
+              <span class="r-section-sub" v-if="config.oc">(Anexo No. 1 – OC {{ config.oc }})</span>
+              <span class="r-section-sub" v-else>(Anexo No. 1)</span>
+            </div>
+            <table class="r-table r-table-compact r-compliance">
+              <thead>
+                <tr>
+                  <th>Servicio / Obligación Contractual</th>
+                  <th class="text-center r-compliance-status">Estado</th>
+                  <th>Observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="(item, i) in complianceItems(esc.id)" :key="'c'+i">
+                  <tr v-if="item.type === 'group'" class="r-compliance-group">
+                    <td colspan="3">• <strong>{{ item.label }}</strong></td>
+                  </tr>
+                  <tr v-else>
+                    <td :class="item.indent ? 'r-compliance-indent' : ''">
+                      {{ item.indent ? '*' : '•' }} {{ item.label }}
+                    </td>
+                    <td class="text-center">
+                      <span :class="complianceBadge(item.estado)">{{ item.estado }}</span>
+                    </td>
+                    <td class="text-xs">{{ item.obs }}</td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
           <!-- FIRMAS -->
           <div class="r-section r-signatures">
             <div class="r-sig-col">
@@ -749,7 +788,7 @@ const filters = reactive({
   anio: now.getFullYear(),
   escenario_id: '' as number | '',
 })
-const config = reactive({ contratista: 'ISATECH, S.A.S. de C.V.', administrador: 'INDES' })
+const config = reactive({ contratista: 'ISATECH, S.A.S. de C.V.', administrador: 'INDES', oc: '115/2026' })
 
 const mesNombre = (m: number) => MESES[m - 1] || ''
 
@@ -1168,6 +1207,181 @@ const sistemasEstado = [
   { nombre: 'Equipo de Cabina de Producción',  estado: 'Operativo' },
 ]
 
+// ── Cumplimiento contractual (Anexo No. 1 – OC) ───────────
+// Deriva estados y observaciones de los datos ya cargados
+// (mantenimientos, técnicos, piezas y eventos del período).
+type ComplianceItem =
+  | { type: 'group'; label: string }
+  | { type: 'row'; label: string; estado: 'Cumplido' | 'N/A' | 'Pendiente'; obs: string; indent?: boolean }
+
+const complianceBadge = (estado: string) => ({
+  'Cumplido':  'badge badge-green',
+  'N/A':       'badge badge-gray',
+  'Pendiente': 'badge badge-yellow',
+}[estado] || 'badge badge-gray')
+
+function complianceItems(id: number): ComplianceItem[] {
+  const mants        = mantsForEsc(id)
+  const hasPrev      = hasType(id, 'preventivo')
+  const hasCorr      = hasType(id, 'correctivo')
+  const hasOper      = hasType(id, 'operativo')
+  const anyMant      = mants.length > 0
+  const piezas       = piezasForEsc(id)
+  const hasLedRepair = piezas.some(p => /led|tarjeta|se[ñn]al/i.test(p.tipo_pieza || '') || /led|tarjeta|se[ñn]al/i.test(p.descripcion_pieza || ''))
+  const eventos      = eventosForEsc(id)
+  const hasEventos   = eventos.length > 0
+  const tecnicos     = tecnicosForEsc(id).length
+
+  const items: ComplianceItem[] = []
+
+  items.push({
+    type: 'row',
+    label: 'Limpieza y revisión de bocinas, rejillas protectoras y conectores.',
+    estado: anyMant ? 'Cumplido' : 'N/A',
+    obs: anyMant
+      ? 'Limpieza profunda realizada en bocinas y rejillas del escenario.'
+      : 'Sin visitas registradas en el período.',
+  })
+  items.push({
+    type: 'row',
+    label: 'Mantenimiento de consolas de audio y equipos de reproducción.',
+    estado: anyMant ? 'Cumplido' : 'N/A',
+    obs: anyMant
+      ? 'Limpieza y ordenamiento de consolas y amplificadores en cabina.'
+      : 'Sin visitas registradas en el período.',
+  })
+
+  items.push({ type: 'group', label: 'Cuidado de pantallas digitales COLOSSEO, abarcando:' })
+  items.push({
+    type: 'row', indent: true,
+    label: 'Limpieza de gabinetes, ventiladores, rejillas, filtros y conectores.',
+    estado: anyMant ? 'Cumplido' : 'N/A',
+    obs: anyMant
+      ? 'Limpieza técnica con aire comprimido y limpiador dieléctrico.'
+      : 'Sin visitas registradas en el período.',
+  })
+  items.push({
+    type: 'row', indent: true,
+    label: 'Revisión y mantenimiento de cableado eléctrico y de señal.',
+    estado: anyMant ? 'Cumplido' : 'N/A',
+    obs: anyMant
+      ? 'Cableado revisado, etiquetado y organizado. Sin fallas detectadas.'
+      : 'Sin visitas registradas en el período.',
+  })
+  items.push({
+    type: 'row', indent: true,
+    label: 'Soldaduras y cambios en componentes como LEDs y tarjetas de señal.',
+    estado: hasCorr || hasLedRepair ? 'Cumplido' : 'N/A',
+    obs: hasCorr || hasLedRepair
+      ? (piezas.length
+          ? `Se realizaron ${piezas.length} cambio(s) de componente(s) con trazabilidad por número de serie.`
+          : 'Intervención correctiva ejecutada sobre componentes electrónicos.')
+      : 'No se detectaron componentes dañados en el período.',
+  })
+  items.push({
+    type: 'row', indent: true,
+    label: 'Pruebas para asegurar el rendimiento óptimo.',
+    estado: anyMant ? 'Cumplido' : 'N/A',
+    obs: anyMant
+      ? 'Validación de funcionamiento al cierre de la intervención.'
+      : 'Sin intervenciones que validar en el período.',
+  })
+  items.push({
+    type: 'row', indent: true,
+    label: 'Mantenimiento de estructuras metálicas y tensores.',
+    estado: anyMant ? 'Cumplido' : 'N/A',
+    obs: anyMant
+      ? 'Revisión mecánica de tornillería, fijaciones y tensores. Sin novedades.'
+      : 'Sin visitas registradas en el período.',
+  })
+
+  items.push({ type: 'group', label: 'Producción técnica para eventos deportivos, que incluye:' })
+  items.push({
+    type: 'row', indent: true,
+    label: 'Personal técnico especializado en audio, video y electrónica.',
+    estado: tecnicos > 0 ? 'Cumplido' : 'N/A',
+    obs: tecnicos > 0
+      ? `Equipo de ${tecnicos} técnico(s) especializado(s) asignado(s) a las visitas.`
+      : 'Sin personal técnico asignado en el período.',
+  })
+  items.push({
+    type: 'row', indent: true,
+    label: 'Equipos de operación para control de juegos y supervisión de acceso.',
+    estado: hasEventos || hasOper ? 'Cumplido' : 'N/A',
+    obs: hasEventos || hasOper
+      ? `Cobertura brindada en ${eventos.length + (hasOper ? countTipo(id, 'operativo') : 0)} evento(s)/soporte(s) del período.`
+      : 'No requerido; sin eventos en el período.',
+  })
+  items.push({
+    type: 'row', indent: true,
+    label: 'Roles y turnos para cubrir las necesidades en eventos deportivos.',
+    estado: hasEventos || hasOper ? 'Cumplido' : 'N/A',
+    obs: hasEventos || hasOper
+      ? 'Roles y turnos coordinados conforme a la programación.'
+      : 'No requerido; sin eventos en el período.',
+  })
+  items.push({
+    type: 'row', indent: true,
+    label: 'Preproducción colaborativa con ingenieros y técnicos.',
+    estado: anyMant || hasEventos ? 'Cumplido' : 'N/A',
+    obs: anyMant || hasEventos
+      ? 'Coordinación interna del equipo técnico previo a la visita.'
+      : 'Sin actividades que preparar en el período.',
+  })
+  items.push({
+    type: 'row', indent: true,
+    label: 'Mantenimiento preventivo y correctivo para preservar equipos.',
+    estado: hasPrev || hasCorr ? 'Cumplido' : 'N/A',
+    obs: hasPrev && hasCorr
+      ? 'Mantenimiento preventivo y correctivo ejecutados.'
+      : hasPrev
+        ? 'Mantenimiento preventivo ejecutado. Sin correctivos pendientes.'
+        : hasCorr
+          ? 'Mantenimientos correctivos ejecutados.'
+          : 'Sin intervenciones registradas en el período.',
+  })
+
+  items.push({ type: 'group', label: 'Aspectos adicionales:' })
+  items.push(...[
+    {
+      label: 'Seguridad para el personal técnico.',
+      cumplida: anyMant,
+      obsOk: 'Uso de EPP durante toda la intervención.',
+      obsNa: 'Sin intervenciones en el período.',
+    },
+    {
+      label: 'Mantenimiento de equipo de cabina de producción.',
+      cumplida: anyMant,
+      obsOk: 'Cabina organizada y equipos en condiciones óptimas de operación.',
+      obsNa: 'Sin intervenciones en el período.',
+    },
+    {
+      label: 'Coordinación de intervenciones en equipo a demanda.',
+      cumplida: anyMant || hasEventos,
+      obsOk: 'Intervención coordinada conforme orden de pedido mensual.',
+      obsNa: 'No requerido en el presente período.',
+    },
+    {
+      label: 'Actualizaciones y configuración de equipos acorde a normativas.',
+      cumplida: anyMant,
+      obsOk: 'Configuración verificada; sin actualizaciones pendientes.',
+      obsNa: 'No requerido en el presente período.',
+    },
+  ].map<ComplianceItem>(r => ({
+    type: 'row', indent: true, label: r.label,
+    estado: r.cumplida ? 'Cumplido' : 'N/A',
+    obs: r.cumplida ? r.obsOk : r.obsNa,
+  })))
+  items.push({
+    type: 'row', indent: true,
+    label: 'Preparación de instrucciones audiovisuales para emergencias.',
+    estado: 'N/A',
+    obs: 'No requerido en el presente período.',
+  })
+
+  return items
+}
+
 // ── Generate ──────────────────────────────────────────────
 async function generar() {
   if (filters.tipoReporte === 'mantenimiento' && !filters.escenario_id) {
@@ -1475,6 +1689,18 @@ onMounted(async () => {
 .r-tfoot td { background: #f1f5f9 !important; color: #1e3a5f; padding-top: 0.5rem; padding-bottom: 0.5rem; }
 .r-td-label  { color: #374151; font-size: 0.8rem; }
 .r-td-status { font-weight: 600; color: #1e3a5f; text-align: center; }
+
+/* ── Cumplimiento contractual (Anexo No. 1) ──────────────── */
+.r-section-sub {
+  font-size: 0.75rem; font-weight: 500; color: #64748b; margin-left: 0.375rem;
+  text-transform: none; letter-spacing: 0;
+}
+.r-compliance th.r-compliance-status { width: 6.5rem; }
+.r-compliance-group td {
+  background: #eff6ff !important; color: #1e3a5f; font-size: 0.78rem;
+  padding-top: 0.5rem !important; padding-bottom: 0.5rem !important;
+}
+.r-compliance-indent { padding-left: 1.5rem !important; color: #334155; }
 
 /* ── Signatures ──────────────────────────────────────────── */
 .r-signatures {
